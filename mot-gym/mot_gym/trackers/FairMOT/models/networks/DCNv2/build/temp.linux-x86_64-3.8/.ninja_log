@@ -1,5 +1,0 @@
-# ninja log v5
-0	4220	1656880423450000000	/media/dchipping/extreme-ssd/Data/project/repos/FairMOT/src/lib/models/networks/DCNv2/build/temp.linux-x86_64-3.8/media/dchipping/extreme-ssd/Data/project/repos/FairMOT/src/lib/models/networks/DCNv2/src/cpu/dcn_v2_cpu.o	692d4c5ae2adb370
-3	11527	1656880430750000000	/media/dchipping/extreme-ssd/Data/project/repos/FairMOT/src/lib/models/networks/DCNv2/build/temp.linux-x86_64-3.8/media/dchipping/extreme-ssd/Data/project/repos/FairMOT/src/lib/models/networks/DCNv2/src/cuda/dcn_v2_im2col_cuda.o	9f1e64bd454f1792
-4	11705	1656880430930000000	/media/dchipping/extreme-ssd/Data/project/repos/FairMOT/src/lib/models/networks/DCNv2/build/temp.linux-x86_64-3.8/media/dchipping/extreme-ssd/Data/project/repos/FairMOT/src/lib/models/networks/DCNv2/src/cuda/dcn_v2_psroi_pooling_cuda.o	e52def7b7a25bb86
-0	20554	1656880439770000000	/media/dchipping/extreme-ssd/Data/project/repos/FairMOT/src/lib/models/networks/DCNv2/build/temp.linux-x86_64-3.8/media/dchipping/extreme-ssd/Data/project/repos/FairMOT/src/lib/models/networks/DCNv2/src/vision.o	67fd66730913e6c
