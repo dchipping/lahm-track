@@ -44,7 +44,7 @@ class BasicMotEnv(gym.Env):
         os.environ['CUDA_VISIBLE_DEVICES'] = '0'
         model_path = self._get_model_path('all_dla34.pth')
         self.opt = opts().init(['mot', f'--load_model={model_path}'])
-        self.tracker = Tracker(self.opt, self.frame_rate)
+        self.tracker = Tracker(self.opt, self.frame_rate, train_mode=True)
 
     def reset(self):
         self.ep_reward = 0
@@ -63,16 +63,11 @@ class BasicMotEnv(gym.Env):
 
     def step(self, action):
         '''
-        - Each step a new frame is loaded
-        - Detections + encodings generated from FairMOT
-        - Each detection + encoding initialised as track class
-        - Reassociate previous timestep tracks with current
-        - Compare to ground truth, reward for each correct association
-        - Eval on MATCH, SWITCH, FP, MISS
+        - See env-data-flow.png for data flow
         '''
         # Take action
         track = self.online_targets[self.track_idx]
-        track.update_gallery(action)
+        track.update_gallery(action, track.curr_feat)
 
         # Get next targets but freeze track states before so
         # tracker can be restored for all tracks in frame k
@@ -84,8 +79,9 @@ class BasicMotEnv(gym.Env):
         results = {}
         self._add_results(results, self.frame_id, self.online_targets)
         self._add_results(results, self.frame_id + 1, next_targets)
-        acc = self._evalute(results)
-        mm_type = None
+        events = self._evalute(results).events[:].reset_index()
+        curr_events = events[events['FrameId'] == (self.frame_id+1)]
+        mm_type = curr_events[curr_events['HId'] == track.track_id]
 
         # Calculate reward
         reward = self._generate_reward(mm_type)
@@ -98,9 +94,10 @@ class BasicMotEnv(gym.Env):
         else:
             self.track_idx += 1
 
-        # Generate observation and info
-        obs = self._get_obs()
-        info = self._get_info()
+        # Generate observation and info for next step
+        track = self.online_targets[self.track_idx]
+        obs = self._get_obs(track)
+        info = self._get_info(track)
 
         return obs, reward, done, info
 
@@ -145,7 +142,7 @@ class BasicMotEnv(gym.Env):
     def _evalute(self, results):
         self.evaluator.reset_accumulator()
 
-        frames = sorted(list(set(self.gt_frame_dict.keys()) | set(results.keys())))
+        frames = sorted(list(set(results.keys()) | set(results.keys())))
         for frame_id in frames:
             trk_objs = results.get(frame_id, [])
             trk_tlwhs, trk_ids = unzip_objs(trk_objs)[:2]
@@ -153,20 +150,28 @@ class BasicMotEnv(gym.Env):
 
         return self.evaluator.acc
 
-    def _generate_reward(mm_type):
+    def _generate_reward(self, mm_type):
         '''
          Possible Events: ['RAW', 'FP', 'MISS', 'SWITCH',
           'MATCH', 'TRANSFER', 'ASCEND', 'MIGRATE']
         '''
-        match mm_type:
-            case 'MATCH':
-                return 1
-            case 'SWITCH':
-                return -1
-            case 'FP':
-                return -1
-            case 'MISS':
-                return 0
+        # match mm_type:
+        #     case 'MATCH':
+        #         return 1
+        #     case 'SWITCH':
+        #         return -1
+        #     case 'FP':
+        #         return -1
+        #     case 'MISS':
+        #         return 0
+        if mm_type == 'MATCH':
+            return 1
+        elif mm_type == 'SWITCH':
+            return -1
+        elif mm_type == 'FP':
+            return -1
+        elif mm_type == 'MISS':
+            return 0
 
     # TBD
     # def render(self, mode="human"):
@@ -179,8 +184,8 @@ class BasicMotEnv(gym.Env):
     def _get_obs(self, track):
         return track.obs
 
-    def _get_info(self):
-        return { "gallery_size": len(self.features) }
+    def _get_info(self, track):
+        return { "gallery_size": len(track.features) }
 
     def _get_model_path(self, model_name):
         model_path = osp.join(self.gym_path, 'pretrained', model_name)

@@ -27,6 +27,9 @@ class ModifiedSTrack(STrack):
         self.agent = lambda x: random.randint(0,1) #### REPLACE WITH AGENT ####
         self.freeze_gallery = freeze_gallery
         self.obs = None
+        
+        temp_feat /= np.linalg.norm(temp_feat)
+        self.features.append(temp_feat)
  
     def min_gallery_similarity(self, feat):
         feature_idx = None
@@ -39,6 +42,7 @@ class ModifiedSTrack(STrack):
         return min_cosine_similarity, feature_idx
 
     def get_observation(self, new_track):
+        self.curr_feat /= np.linalg.norm(self.curr_feat)
         similarity, _ = self.min_gallery_similarity(new_track.curr_feat)
         return np.array([new_track.score, similarity], dtype=float)
 
@@ -48,14 +52,16 @@ class ModifiedSTrack(STrack):
             self.features.append(feat)
         else:
             pass
+        # self.smooth_feat = HOW??? Pick Matrix of Min from gallery, see line 111 matching.py
+        self.smooth_feat = np.average(self.features, axis=0) ## TEMPORARY FIX #### NEED TO REMOVE ARGH
+        self.smooth_feat /= np.linalg.norm(self.smooth_feat)
+        1 == 1
 
     def agent_update_features(self, feat, obs):
         '''New method added for RL agent to manage gallery'''
         if not self.freeze_gallery:
             action = self.agent.compute_single_action(obs)
             self.update_gallery(action, feat)
-        # self.smooth_feat = HOW??? Pick Matrix of Min from gallery, see line 111 matching.py
-        self.smooth_feat = self.features[-1] ## TEMPORARY FIX #### NEED TO REMOVE ARGH
     
     def re_activate(self, new_track, frame_id, new_id=False):
         self.mean, self.covariance = self.kalman_filter.update(
