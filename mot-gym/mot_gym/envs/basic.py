@@ -79,11 +79,11 @@ class BasicMotEnv(gym.Env):
         results = {}
         self._add_results(results, self.frame_id, self.online_targets)
         self._add_results(results, self.frame_id + 1, next_targets)
-        events = self._evalute(results).events[:].reset_index()
-        curr_events = events[events['FrameId'] == (self.frame_id+1)]
-        mm_type = curr_events[curr_events['HId'] == track.track_id]
-
+        events = self._evalute(results).loc[1]
+        
         # Calculate reward
+        track_event = events[events['HId'] == track.track_id]
+        mm_type = track_event['Type'].values[0]
         reward = self._generate_reward(mm_type)
 
         # Move to next frame and generate detections
@@ -129,7 +129,7 @@ class BasicMotEnv(gym.Env):
         self.tracker.removed_stracks = removed
 
     def _add_results(self, results, frame_id, online_targets):
-        results.setdefault(frame_id, [])
+        results.setdefault(frame_id + 1, [])
         for t in online_targets:
             tlwh = t.tlwh
             tid = t.track_id
@@ -137,33 +137,25 @@ class BasicMotEnv(gym.Env):
             vertical = tlwh[2] / tlwh[3] > 1.6
             if tlwh[2] * tlwh[3] > self.opt.min_box_area and not vertical:
                 track_result = (tuple(tlwh), tid, ts)
-                results[frame_id].append(track_result)
+                results[frame_id + 1].append(track_result)
 
-    def _evalute(self, results):
+    def _evalute(self, results): 
         self.evaluator.reset_accumulator()
 
-        frames = sorted(list(set(results.keys()) | set(results.keys())))
+        frames = sorted(list(set(self.evaluator.gt_frame_dict.keys()) & set(results.keys())))
         for frame_id in frames:
             trk_objs = results.get(frame_id, [])
             trk_tlwhs, trk_ids = unzip_objs(trk_objs)[:2]
             self.evaluator.eval_frame(frame_id, trk_tlwhs, trk_ids, rtn_events=False)
 
-        return self.evaluator.acc
+        events = self.evaluator.acc.events
+        return events[events['Type'] != 'RAW']
 
     def _generate_reward(self, mm_type):
         '''
-         Possible Events: ['RAW', 'FP', 'MISS', 'SWITCH',
-          'MATCH', 'TRANSFER', 'ASCEND', 'MIGRATE']
+        Possible Events: ['RAW', 'FP', 'MISS', 'SWITCH',
+        'MATCH', 'TRANSFER', 'ASCEND', 'MIGRATE']
         '''
-        # match mm_type:
-        #     case 'MATCH':
-        #         return 1
-        #     case 'SWITCH':
-        #         return -1
-        #     case 'FP':
-        #         return -1
-        #     case 'MISS':
-        #         return 0
         if mm_type == 'MATCH':
             return 1
         elif mm_type == 'SWITCH':
@@ -202,7 +194,7 @@ class BasicMotEnv(gym.Env):
         self.frame_rate = int(meta_info[meta_info.find('frameRate') + 10:meta_info.find('\nseqLength')])
         self.seq_len = int(meta_info[meta_info.find('seqLen') + 10:meta_info.find('\nimWidth')])
         # self.gt_dict = read_results(osp.join(data_dir, 'gt', 'gt.txt'), 'mot', is_gt=True)
-        self.evaluator = Evaluator(osp.join(self.gym_path, 'data'), 'MOT17-05', 'mot')
+        self.evaluator = Evaluator(data_dir, '', 'mot')
 
     @staticmethod
     def _get_gym_path():
