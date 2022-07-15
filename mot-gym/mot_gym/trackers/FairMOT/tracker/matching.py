@@ -93,6 +93,7 @@ def iou_distance(atracks, btracks):
 
     return cost_matrix
 
+
 def embedding_distance(tracks, detections, metric='cosine'):
     """
     :param tracks: list[STrack]
