@@ -27,9 +27,7 @@ class ModifiedSTrack(STrack):
         self.agent = lambda x: random.randint(0,1) #### REPLACE WITH AGENT ####
         self.freeze_gallery = freeze_gallery
         self.obs = None
-        
-        temp_feat /= np.linalg.norm(temp_feat)
-        self.features.append(temp_feat)
+        # self.update_features(temp_feat, None, force=True)
  
     def min_gallery_similarity(self, feat):
         feature_idx = None
@@ -48,14 +46,15 @@ class ModifiedSTrack(STrack):
 
     def update_gallery(self, action, feat):
         '''Translate action to change in gallery'''
+        feat /= np.linalg.norm(feat)
         if action == 1:
+            self.smooth_feat = self.alpha * self.smooth_feat + (1 - self.alpha) * feat
+            self.smooth_feat /= np.linalg.norm(self.smooth_feat)
             self.features.append(feat)
-        else:
+        elif action == 0:
             pass
-        # self.smooth_feat = HOW??? Pick Matrix of Min from gallery, see line 111 matching.py
-        self.smooth_feat = np.average(self.features, axis=0) ## TEMPORARY FIX #### NEED TO REMOVE ARGH
-        self.smooth_feat /= np.linalg.norm(self.smooth_feat)
-        1 == 1
+        # self.smooth_feat = np.average(self.features, axis=0)
+        # self.smooth_feat /= np.linalg.norm(self.smooth_feat)
 
     def agent_update_features(self, feat, obs):
         '''New method added for RL agent to manage gallery'''
@@ -104,8 +103,8 @@ class ModifiedJDETracker(JDETracker):
         super().__init__(opt, frame_rate)
         self.train_mode = train_mode
 
-    def update(self, im_blob, img0):
-        self.frame_id += 1
+    def update(self, im_blob, img0, frame_id):
+        # self.frame_id += 1
 
         width = img0.shape[1]
         height = img0.shape[0]
@@ -185,10 +184,10 @@ class ModifiedJDETracker(JDETracker):
             track = strack_pool[itracked]
             det = detections[idet]
             if track.state == TrackState.Tracked:
-                track.update(detections[idet], self.frame_id)
+                track.update(detections[idet], frame_id)
                 activated_starcks.append(track)
             else:
-                track.re_activate(det, self.frame_id, new_id=False)
+                track.re_activate(det, frame_id, new_id=False)
                 refind_stracks.append(track)
 
         ''' Step 3: Second association, with IOU'''
@@ -201,10 +200,10 @@ class ModifiedJDETracker(JDETracker):
             track = r_tracked_stracks[itracked]
             det = detections[idet]
             if track.state == TrackState.Tracked:
-                track.update(det, self.frame_id, self.opt.update_feature)
+                track.update(det, frame_id)
                 activated_starcks.append(track)
             else:
-                track.re_activate(det, self.frame_id, new_id=False)
+                track.re_activate(det, frame_id, new_id=False)
                 refind_stracks.append(track)
 
         for it in u_track:
@@ -218,7 +217,7 @@ class ModifiedJDETracker(JDETracker):
         dists = matching.iou_distance(unconfirmed, detections)
         matches, u_unconfirmed, u_detection = matching.linear_assignment(dists, thresh=0.7)
         for itracked, idet in matches:
-            unconfirmed[itracked].update(detections[idet], self.frame_id)
+            unconfirmed[itracked].update(detections[idet], frame_id)
             activated_starcks.append(unconfirmed[itracked])
         for it in u_unconfirmed:
             track = unconfirmed[it]
@@ -230,11 +229,11 @@ class ModifiedJDETracker(JDETracker):
             track = detections[inew]
             if track.score < self.det_thresh:
                 continue
-            track.activate(self.kalman_filter, self.frame_id)
+            track.activate(self.kalman_filter, frame_id)
             activated_starcks.append(track)
         """ Step 5: Update state"""
         for track in self.lost_stracks:
-            if self.frame_id - track.end_frame > self.max_time_lost:
+            if frame_id - track.end_frame > self.max_time_lost:
                 track.mark_removed()
                 removed_stracks.append(track)
 
@@ -251,10 +250,11 @@ class ModifiedJDETracker(JDETracker):
         # get scores of lost tracks
         output_stracks = [track for track in self.tracked_stracks if track.is_activated]
 
-        logger.debug('===========Frame {}=========='.format(self.frame_id))
-        logger.debug('Activated: {}'.format([track.track_id for track in activated_starcks]))
-        logger.debug('Refind: {}'.format([track.track_id for track in refind_stracks]))
-        logger.debug('Lost: {}'.format([track.track_id for track in lost_stracks]))
-        logger.debug('Removed: {}'.format([track.track_id for track in removed_stracks]))
+        # logger.debug('===========Frame {}=========='.format(frame_id))
+        # logger.debug('Activated: {}'.format([track.track_id for track in activated_starcks]))
+        # logger.debug('Refind: {}'.format([track.track_id for track in refind_stracks]))
+        # logger.debug('Lost: {}'.format([track.track_id for track in lost_stracks]))
+        # logger.debug('Removed: {}'.format([track.track_id for track in removed_stracks]))
 
         return output_stracks
+
