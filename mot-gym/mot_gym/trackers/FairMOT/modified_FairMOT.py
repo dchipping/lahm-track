@@ -48,9 +48,10 @@ class ModifiedSTrack(STrack):
         '''Translate action to change in gallery'''
         feat /= np.linalg.norm(feat)
         if action == 1:
-            self.smooth_feat = self.alpha * self.smooth_feat + (1 - self.alpha) * feat
-            self.smooth_feat /= np.linalg.norm(self.smooth_feat)
             self.features.append(feat)
+            for feat in self.features:
+                self.smooth_feat = self.alpha * self.smooth_feat + (1 - self.alpha) * feat
+            self.smooth_feat /= np.linalg.norm(self.smooth_feat)
         elif action == 0:
             pass
         # self.smooth_feat = np.average(self.features, axis=0)
@@ -103,9 +104,8 @@ class ModifiedJDETracker(JDETracker):
         super().__init__(opt, frame_rate)
         self.train_mode = train_mode
 
-    def update(self, im_blob, img0, frame_id, eval_update=False):
+    def update(self, im_blob, img0, frame_id):
         self.frame_id = frame_id # self.frame_id += 1
-        frozen_count = BaseTrack._count
 
         width = img0.shape[1]
         height = img0.shape[0]
@@ -239,8 +239,6 @@ class ModifiedJDETracker(JDETracker):
                 removed_stracks.append(track)
 
         # print('Ramained match {} s'.format(t4-t3))
-        if eval_update:
-            BaseTrack._count = frozen_count
 
         self.tracked_stracks = [t for t in self.tracked_stracks if t.state == TrackState.Tracked]
         self.tracked_stracks = joint_stracks(self.tracked_stracks, activated_starcks)

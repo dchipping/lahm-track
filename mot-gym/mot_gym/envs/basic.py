@@ -15,6 +15,7 @@ from FairMOT.opts import opts
 from FairMOT.modified_FairMOT import ModifiedJDETracker as Tracker
 from FairMOT.tracking_utils.evaluation import Evaluator
 from FairMOT.tracking_utils.io import unzip_objs
+from FairMOT.tracker.basetrack import BaseTrack
 
 
 class BasicMotEnv(gym.Env):
@@ -60,64 +61,62 @@ class BasicMotEnv(gym.Env):
         self.results = []
 
         self.online_targets = self._track_update(self.frame_id)
-        # Only release once first track(s) has been confirmed
+        # Only release once first track(s) confirmed
         while not self.online_targets:
             done = self._step_frame()
             if done: raise Exception('Sequence too short')
 
-        tids = {t.track_id for t in self.online_targets}
-        print(f"=== Starting at frame {self.frame_id} ===")
-        print(f"Detections: {len(self.online_targets)} - {tids}")
         track = self.online_targets[self.track_idx]
         obs = self._get_obs(track)
-        return obs
+        info = self._get_info(track)
+        return obs, info
 
     def step(self, action):
         '''
         See env-data-flow.png for data flow
         '''
-        action = 1
-        reward = 1
         # Take action
         track = self.online_targets[self.track_idx]
         track.update_gallery(action, track.curr_feat)
 
-        # Get next targets but freeze track states before so
-        # tracker can be restored for all tracks in frame k
-        self.frozen_tracks = self._save_tracks()
-        # tmp = copy.deepcopy(self.tracker)
-        next_targets = self._track_update(self.frame_id + 1, eval=True)
-        # self.tracker = tmp
-        self._load_tracks(self.frozen_tracks)
-
-        # # Compare gt and results for frame k and k+1
-        # results = {}
-        # self._add_results(results, self.frame_id, self.online_targets)
-        # self._add_results(results, self.frame_id + 1, next_targets)
-        # events = self._evalute(results).loc[1]
-        
-        # # Calculate reward
-        # track_event = events[events['HId'] == track.track_id]
-        # mm_type = track_event['Type'].values[0]
-        # reward = self._generate_reward(mm_type)
+        # Look to future to evaluate if succesful action
+        reward = 0
+        if self.frame_id < self.seq_len:
+            mm_type = self._evaluate(track.track_id, 1)
+            reward = self._generate_reward(mm_type)
+        self.ep_reward += reward
 
         # Move to next frame and generate detections
         done = False
-        if self.track_idx + 1 == len(self.online_targets):
+        if self.track_idx + 1 < len(self.online_targets):
+            self.track_idx += 1
+        else:
             done = self._step_frame()
             self.track_idx = 0
-            tids = {t.track_id for t in self.online_targets}
-            print(f"=== Moving to frame {self.frame_id} ===")
-            print(f"Detections: {len(self.online_targets)} - {tids}")
-        else:
-            self.track_idx += 1
 
-        # Generate observation and info for next step
+        # Generate observation and info for new track
         track = self.online_targets[self.track_idx]
         obs = self._get_obs(track)
         info = self._get_info(track)
 
         return obs, reward, done, info
+
+    def _evaluate(self, track_id, eval_step=1): # TODO: Curr limited to k -> k+1
+        # Get next targets but freeze track states before so
+        # tracker can be restored for all tracks in frame k
+        eval_frame_id = self.frame_id + eval_step
+        next_targets = self._track_eval(eval_frame_id) 
+
+        # Compare gt and results for frame k and k+1
+        results = {}
+        self._add_results(results, self.frame_id, self.online_targets)
+        self._add_results(results, self.frame_id + 1, next_targets)
+        events = self._evalute(results).loc[1]
+        
+        # Calculate reward
+        track_event = events[events['HId'] == track_id]
+        mm_type = track_event['Type'].values[0] if track_event.size else 'LOST'
+        return mm_type
 
     def _step_frame(self):
         done = False
@@ -131,22 +130,32 @@ class BasicMotEnv(gym.Env):
             self._write_results(self.results, 'mot')
             return done
 
-    def _track_update(self, frame_id, eval=False):
-        path, img, img0 = self.dataloader[frame_id - 1]
+    def _track_update(self, frame_id):
+        frame_idx = frame_id - 1
+        path, img, img0 = self.dataloader[frame_idx]
         blob = torch.from_numpy(img).cuda().unsqueeze(0)
-        return self.tracker.update(blob, img0, frame_id, eval)
+        return self.tracker.update(blob, img0, frame_id)
 
-    def _save_tracks(self):
-        tracks = copy.deepcopy(self.tracker.tracked_stracks)
-        lost = copy.deepcopy(self.tracker.lost_stracks)
-        removed = copy.deepcopy(self.tracker.removed_stracks)
-        return (tracks, lost, removed)
+    def _track_eval(self, eval_frame_id):
+        frozen_count = BaseTrack._count
+        forzen_tracks = copy.deepcopy(self.tracker.tracked_stracks)
+        frozen_lost = copy.deepcopy(self.tracker.lost_stracks)
+        frozen_removed = copy.deepcopy(self.tracker.removed_stracks)
 
-    def _load_tracks(self, frozen_tracks):
-        tracks, lost, removed = frozen_tracks
-        self.tracker.tracked_stracks = tracks
-        self.tracker.lost_stracks = lost
-        self.tracker.removed_stracks = removed
+        frame_id = self.frame_id
+        while frame_id < eval_frame_id:
+            frame_id += 1
+            frame_idx = frame_id - 1
+            path, img, img0 = self.dataloader[frame_idx]
+            blob = torch.from_numpy(img).cuda().unsqueeze(0)
+            tracks = self.tracker.update(blob, img0, frame_id)
+
+        BaseTrack._count = frozen_count
+        self.tracker.tracked_stracks = forzen_tracks
+        self.tracker.lost_stracks = frozen_lost
+        self.tracker.removed_stracks = frozen_removed
+
+        return tracks
 
     def _add_results(self, results_dict, frame_id, online_targets):
         results_dict.setdefault(frame_id, [])
@@ -195,7 +204,7 @@ class BasicMotEnv(gym.Env):
             return -1
         elif mm_type == 'FP':
             return -1
-        elif mm_type == 'MISS':
+        elif mm_type == 'LOST':
             return 0
 
     def render(self, mode="human"):
@@ -213,6 +222,10 @@ class BasicMotEnv(gym.Env):
             bbox = track.tlwh
             curr_track = (i == self.track_idx)
             self._visualize_box(img0, text, bbox, i, curr_track)
+
+        curr_tid = self.online_targets[self.track_idx].track_id
+        text = f'TrackID {curr_tid}, Frame {self.frame_id}, {self.frame_rate} fps'
+        cv2.putText(img0, text, (4,16), cv2.FONT_HERSHEY_PLAIN, 1, (0,0,255), 1, cv2.LINE_AA)
         cv2.imshow('env snapshot', img0)
         cv2.waitKey(1)
 
@@ -224,7 +237,11 @@ class BasicMotEnv(gym.Env):
         return track.obs
 
     def _get_info(self, track):
-        return { "gallery_size": len(track.features) }
+        tids = {t.track_id for t in self.online_targets}
+        track_info = { "track_id": track.track_id, "gallery_size": len(track.features) }
+        seq_info = { "seq_len": self.seq_len, "frame_rate": self.frame_rate }
+        return { "curr_frame": self.frame_id, "ep_reward": self.ep_reward, 
+        "tracks_ids": tids, "curr_track": track_info, "seq_info": seq_info }
 
     def _get_model_path(self, model_name):
         model_path = osp.join(self.gym_path, 'pretrained', model_name)
