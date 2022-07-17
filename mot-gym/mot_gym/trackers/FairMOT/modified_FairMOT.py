@@ -17,7 +17,7 @@ from .tracking_utils.utils import *
 import random
 from scipy import spatial
 
-from .tracker.basetrack import TrackState
+from .tracker.basetrack import BaseTrack, TrackState
 from .tracker.multitracker import STrack, JDETracker, joint_stracks, sub_stracks, remove_duplicate_stracks
 
 
@@ -103,8 +103,9 @@ class ModifiedJDETracker(JDETracker):
         super().__init__(opt, frame_rate)
         self.train_mode = train_mode
 
-    def update(self, im_blob, img0, frame_id):
-        # self.frame_id += 1
+    def update(self, im_blob, img0, frame_id, eval_update=False):
+        self.frame_id = frame_id # self.frame_id += 1
+        frozen_count = BaseTrack._count
 
         width = img0.shape[1]
         height = img0.shape[0]
@@ -238,6 +239,8 @@ class ModifiedJDETracker(JDETracker):
                 removed_stracks.append(track)
 
         # print('Ramained match {} s'.format(t4-t3))
+        if eval_update:
+            BaseTrack._count = frozen_count
 
         self.tracked_stracks = [t for t in self.tracked_stracks if t.state == TrackState.Tracked]
         self.tracked_stracks = joint_stracks(self.tracked_stracks, activated_starcks)

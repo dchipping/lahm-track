@@ -8,6 +8,7 @@ import copy
 import datetime as dt
 import cv2
 from gym import spaces
+from .bbox_colors import _COLORS
 
 import FairMOT.datasets.dataset.jde as datasets
 from FairMOT.opts import opts
@@ -41,7 +42,7 @@ class BasicMotEnv(gym.Env):
         self.dataloader = None
         self.frame_rate = None
         self.evaluator = None
-        self._load_mot17_05()
+        self._load_data('short-seq/10-frames')
 
         # Initialise FairMOT tracker
         os.environ['CUDA_VISIBLE_DEVICES'] = '0'
@@ -84,19 +85,21 @@ class BasicMotEnv(gym.Env):
         # Get next targets but freeze track states before so
         # tracker can be restored for all tracks in frame k
         self.frozen_tracks = self._save_tracks()
-        next_targets = self._track_update(self.frame_id + 1)
+        # tmp = copy.deepcopy(self.tracker)
+        next_targets = self._track_update(self.frame_id + 1, eval=True)
+        # self.tracker = tmp
         self._load_tracks(self.frozen_tracks)
 
-        # Compare gt and results for frame k and k+1
-        results = {}
-        self._add_results(results, self.frame_id, self.online_targets)
-        self._add_results(results, self.frame_id + 1, next_targets)
-        events = self._evalute(results).loc[1]
+        # # Compare gt and results for frame k and k+1
+        # results = {}
+        # self._add_results(results, self.frame_id, self.online_targets)
+        # self._add_results(results, self.frame_id + 1, next_targets)
+        # events = self._evalute(results).loc[1]
         
-        # Calculate reward
-        track_event = events[events['HId'] == track.track_id]
-        mm_type = track_event['Type'].values[0]
-        reward = self._generate_reward(mm_type)
+        # # Calculate reward
+        # track_event = events[events['HId'] == track.track_id]
+        # mm_type = track_event['Type'].values[0]
+        # reward = self._generate_reward(mm_type)
 
         # Move to next frame and generate detections
         done = False
@@ -128,10 +131,10 @@ class BasicMotEnv(gym.Env):
             self._write_results(self.results, 'mot')
             return done
 
-    def _track_update(self, frame_id):
+    def _track_update(self, frame_id, eval=False):
         path, img, img0 = self.dataloader[frame_id - 1]
         blob = torch.from_numpy(img).cuda().unsqueeze(0)
-        return self.tracker.update(blob, img0, frame_id)
+        return self.tracker.update(blob, img0, frame_id, eval)
 
     def _save_tracks(self):
         tracks = copy.deepcopy(self.tracker.tracked_stracks)
@@ -210,13 +213,6 @@ class BasicMotEnv(gym.Env):
             bbox = track.tlwh
             curr_track = (i == self.track_idx)
             self._visualize_box(img0, text, bbox, i, curr_track)
-            # bbox = track.tlbr
-            # bbox = np.array(bbox, dtype=np.int)
-            # # Highlight current track under evaluation
-            # colour = (0, 0, 255) if i == self.track_idx else (0, 255, 255)
-            # cv2.rectangle(img0, (bbox[0], bbox[1]), 
-            #                 (bbox[2], bbox[3]),
-            #                 colour, 2)
         cv2.imshow('env snapshot', img0)
         cv2.waitKey(1)
 
@@ -234,7 +230,7 @@ class BasicMotEnv(gym.Env):
         model_path = osp.join(self.gym_path, 'pretrained', model_name)
         return model_path
 
-    def _load_mot17_05(self, seq_path='MOT17/train/MOT17-05'):
+    def _load_data(self, seq_path='MOT17/train/MOT17-05'):
         '''
         MOT submission format:
         <frame>, <id>, <bb_left>, <bb_top>, <bb_width>, <bb_height>, <conf>, <x>, <y>, <z>
@@ -303,88 +299,3 @@ class BasicMotEnv(gym.Env):
         )
         cv2.putText(img, text, (x0, y0 + txt_size[1]), font, 0.6, txt_color, thickness=1)
         return img
-
-_COLORS = np.array(
-    [
-        0.000, 0.447, 0.741,
-        0.850, 0.325, 0.098,
-        0.929, 0.694, 0.125,
-        0.494, 0.184, 0.556,
-        0.466, 0.674, 0.188,
-        0.301, 0.745, 0.933,
-        0.635, 0.078, 0.184,
-        0.300, 0.300, 0.300,
-        0.600, 0.600, 0.600,
-        1.000, 0.000, 0.000,
-        1.000, 0.500, 0.000,
-        0.749, 0.749, 0.000,
-        0.000, 1.000, 0.000,
-        0.000, 0.000, 1.000,
-        0.667, 0.000, 1.000,
-        0.333, 0.333, 0.000,
-        0.333, 0.667, 0.000,
-        0.333, 1.000, 0.000,
-        0.667, 0.333, 0.000,
-        0.667, 0.667, 0.000,
-        0.667, 1.000, 0.000,
-        1.000, 0.333, 0.000,
-        1.000, 0.667, 0.000,
-        1.000, 1.000, 0.000,
-        0.000, 0.333, 0.500,
-        0.000, 0.667, 0.500,
-        0.000, 1.000, 0.500,
-        0.333, 0.000, 0.500,
-        0.333, 0.333, 0.500,
-        0.333, 0.667, 0.500,
-        0.333, 1.000, 0.500,
-        0.667, 0.000, 0.500,
-        0.667, 0.333, 0.500,
-        0.667, 0.667, 0.500,
-        0.667, 1.000, 0.500,
-        1.000, 0.000, 0.500,
-        1.000, 0.333, 0.500,
-        1.000, 0.667, 0.500,
-        1.000, 1.000, 0.500,
-        0.000, 0.333, 1.000,
-        0.000, 0.667, 1.000,
-        0.000, 1.000, 1.000,
-        0.333, 0.000, 1.000,
-        0.333, 0.333, 1.000,
-        0.333, 0.667, 1.000,
-        0.333, 1.000, 1.000,
-        0.667, 0.000, 1.000,
-        0.667, 0.333, 1.000,
-        0.667, 0.667, 1.000,
-        0.667, 1.000, 1.000,
-        1.000, 0.000, 1.000,
-        1.000, 0.333, 1.000,
-        1.000, 0.667, 1.000,
-        0.333, 0.000, 0.000,
-        0.500, 0.000, 0.000,
-        0.667, 0.000, 0.000,
-        0.833, 0.000, 0.000,
-        1.000, 0.000, 0.000,
-        0.000, 0.167, 0.000,
-        0.000, 0.333, 0.000,
-        0.000, 0.500, 0.000,
-        0.000, 0.667, 0.000,
-        0.000, 0.833, 0.000,
-        0.000, 1.000, 0.000,
-        0.000, 0.000, 0.167,
-        0.000, 0.000, 0.333,
-        0.000, 0.000, 0.500,
-        0.000, 0.000, 0.667,
-        0.000, 0.000, 0.833,
-        0.000, 0.000, 1.000,
-        0.000, 0.000, 0.000,
-        0.143, 0.143, 0.143,
-        0.286, 0.286, 0.286,
-        0.429, 0.429, 0.429,
-        0.571, 0.571, 0.571,
-        0.714, 0.714, 0.714,
-        0.857, 0.857, 0.857,
-        0.000, 0.447, 0.741,
-        0.314, 0.717, 0.741,
-        0.50, 0.5, 0
-    ]
-).astype(np.float32).reshape(-1, 3)

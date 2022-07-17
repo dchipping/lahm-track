@@ -55,3 +55,13 @@ class BaseTrack(object):
 
     def mark_removed(self):
         self.state = TrackState.Removed
+
+# if __name__ == "__main__":
+#     t1 = BaseTrack()
+#     t2 = BaseTrack()
+#     t3 = BaseTrack()
+#     t4 = BaseTrack()
+#     print(t1.track_id)
+#     print(t2.track_id)
+#     print(t3.track_id)
+#     print(t4.track_id)
