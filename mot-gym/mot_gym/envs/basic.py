@@ -20,7 +20,6 @@ from FairMOT.tracking_utils.io import unzip_objs
 from FairMOT.tracker.basetrack import BaseTrack
 
 
-# TODO: Why last frame gets dif results from rest?
 class BasicMotEnv(gym.Env):
     def __init__(self):
         '''
@@ -42,9 +41,6 @@ class BasicMotEnv(gym.Env):
         self.gym_path = self._get_gym_path()
         
         # Load seq data and gt
-        self.dataloader = None
-        self.frame_rate = None
-        self.evaluator = None
         self._load_data('short-seq/50-frames')
 
         # Initialise FairMOT tracker
@@ -62,7 +58,7 @@ class BasicMotEnv(gym.Env):
         self.frame_id = 1
         self.results = []
 
-        self.online_targets = self._track_update(self.frame_id)
+        self.online_targets, self.detections = self._track_update(self.frame_id)
         # Only release once first track(s) confirmed
         while not self.online_targets:
             done = self._step_frame()
@@ -82,11 +78,10 @@ class BasicMotEnv(gym.Env):
         track = self.online_targets[self.track_idx]
         track.update_gallery(action, track.curr_feat)
 
-        # Look to future to evaluate if succesful action
+        # Look to future to evaluate if successful action
         reward = 0
         if self.frame_id < self.seq_len:
             mm_type = self._evaluate(track.track_id, 1)
-            # mm_type = 'LOST'
             reward = self._generate_reward(mm_type)
             # print(mm_type, reward)
         self.ep_reward += reward
@@ -127,7 +122,7 @@ class BasicMotEnv(gym.Env):
         done = False
         if self.frame_id < self.seq_len:
             self.frame_id += 1
-            self.online_targets = self._track_update(self.frame_id)
+            self.online_targets, self.detections = self._track_update(self.frame_id)
             self._save_results(self.frame_id, self.online_targets)
             return done
         else:
@@ -140,8 +135,6 @@ class BasicMotEnv(gym.Env):
         frame_idx = frame_id - 1
         path, img, img0 = self.dataloader[frame_idx]
         blob = torch.from_numpy(img).cuda().unsqueeze(0)
-        if self.frame_id == 50:
-            l = 50 % 20
         return self.tracker.update(blob, img0, frame_id)
 
     def _track_eval(self, eval_frame_id):
@@ -159,7 +152,7 @@ class BasicMotEnv(gym.Env):
             frame_id += 1; frame_idx = frame_id - 1
             path, img, img0 = self.dataloader[frame_idx]
             blob = torch.from_numpy(img).cuda().unsqueeze(0)
-            online_targets = self.tracker.update(blob, img0, frame_id)
+            online_targets, _ = self.tracker.update(blob, img0, frame_id, self.detections)
 
         BaseTrack._count = frozen_count
         self.tracker.tracked_stracks = forzen_tracks

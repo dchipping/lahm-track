@@ -5,6 +5,7 @@
 # ------------------------------------------------------------------------------
 
 from collections import deque
+import copy
 
 import numpy as np
 import torch
@@ -22,10 +23,8 @@ from scipy import spatial
 from .tracker.basetrack import TrackState
 from .tracker.multitracker import STrack, JDETracker, joint_stracks, sub_stracks, remove_duplicate_stracks
 
-
-#TODO: track added without feature intially
 class ModifiedSTrack(STrack):
-    def __init__(self, tlwh, score, temp_feat, buffer_size=30, freeze_gallery=False):
+    def __init__(self, tlwh, score, temp_feat, freeze_gallery=False):
         self._tlwh = np.asarray(tlwh, dtype=np.float)
         self.kalman_filter = None
         self.mean, self.covariance = None, None
@@ -41,7 +40,7 @@ class ModifiedSTrack(STrack):
         self.obs = self.init_observation(temp_feat)
         self.curr_feat = temp_feat
         self.smooth_feat = temp_feat
-        self.features = deque([], maxlen=buffer_size)
+        self.features = deque([])
         # self.features = None
         self.alpha = 0.9
  
@@ -69,6 +68,14 @@ class ModifiedSTrack(STrack):
     def update_gallery(self, action, feat):
         '''Translate action to change in gallery'''
         if action == 1:
+            self.features.append(feat)
+            for i, feat in enumerate(self.features): # Recalculate gallery each update
+                if i == 0:
+                    self.smooth_feat = feat
+                else:
+                    self.smooth_feat = self.alpha * self.smooth_feat + (1 - self.alpha) * feat
+
+            # # Vectorised approach, requires self.features = None
             # feat = np.expand_dims(feat, axis=1)
             # if not self.features:
             #   self.features = feat
@@ -79,14 +86,7 @@ class ModifiedSTrack(STrack):
             # betas = np.full((l,), 0.1); betas[0] = 1;
             # weights = alphas * betas
             # self.smooth_feat = self.features @ weights
-            
-            self.features.append(feat)
-            # for i, feat in enumerate(self.features): # Recalculate gallery each update
-            #     if i == 0:
-            #         self.smooth_feat = feat
-            #     else:
-            #         self.smooth_feat = self.alpha * self.smooth_feat + (1 - self.alpha) * feat
-            self.smooth_feat = self.alpha * self.smooth_feat + (1 - self.alpha) * feat
+
             self.smooth_feat /= np.linalg.norm(self.smooth_feat)
         elif action == 0:
             pass
@@ -141,61 +141,57 @@ class ModifiedJDETracker(JDETracker):
         super().__init__(opt, frame_rate)
         self.train_mode = train_mode
 
-    def update(self, im_blob, img0, frame_id):
+    def update(self, im_blob, img0, frame_id, cached_detections=None):
         self.frame_id = frame_id # self.frame_id += 1
         activated_starcks = []
         refind_stracks = []
         lost_stracks = []
         removed_stracks = []
 
-        width = img0.shape[1]
-        height = img0.shape[0]
-        inp_height = im_blob.shape[2]
-        inp_width = im_blob.shape[3]
-        c = np.array([width / 2., height / 2.], dtype=np.float32)
-        s = max(float(inp_width) / float(inp_height) * height, width) * 1.0
-        meta = {'c': c, 's': s,
-                'out_height': inp_height // self.opt.down_ratio,
-                'out_width': inp_width // self.opt.down_ratio}
-
-        ''' Step 1: Network forward, get detections & embeddings'''
-        with torch.no_grad():
-            output = self.model(im_blob)[-1]
-            hm = output['hm'].sigmoid_()
-            wh = output['wh'] 
-            id_feature = output['id']
-            id_feature = F.normalize(id_feature, dim=1)
-
-            reg = output['reg'] if self.opt.reg_offset else None
-            dets, inds = mot_decode(hm, wh, reg=reg, cat_spec_wh=self.opt.cat_spec_wh, K=self.opt.K)
-            id_feature = _tranpose_and_gather_feat(id_feature, inds)
-            id_feature = id_feature.squeeze(0)
-            id_feature = id_feature.cpu().numpy()
-
-        dets = self.post_process(dets, meta)
-        dets = self.merge_outputs([dets])[1]
-
-        remain_inds = dets[:, 4] > self.opt.conf_thres
-        dets = dets[remain_inds]
-        id_feature = id_feature[remain_inds]
-
-        # vis
-        # for i in range(0, dets.shape[0]):
-        #     bbox = dets[i][0:4]
-        #     bbox = np.array(bbox, dtype=np.int)
-        #     cv2.rectangle(img0, (bbox[0], bbox[1]), 
-        #                     (bbox[2], bbox[3]),
-        #                     (0, 255, 0), 2)
-        # cv2.imshow('dets', img0)
-        # cv2.waitKey(0)
-        # id0 = id0-1
-
-        if len(dets) > 0:
-            '''Detections'''
-            detections = [ModifiedSTrack(ModifiedSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f,
-            freeze_gallery=self.train_mode) for (tlbrs, f) in zip(dets[:, :5], id_feature)]
+        # Only forward pass if new frame an no cached detections (update phase)
+        if cached_detections:
+            detections = copy.deepcopy(cached_detections)
         else:
-            detections = []
+            width = img0.shape[1]
+            height = img0.shape[0]
+            inp_height = im_blob.shape[2]
+            inp_width = im_blob.shape[3]
+            c = np.array([width / 2., height / 2.], dtype=np.float32)
+            s = max(float(inp_width) / float(inp_height) * height, width) * 1.0
+            meta = {'c': c, 's': s,
+                    'out_height': inp_height // self.opt.down_ratio,
+                    'out_width': inp_width // self.opt.down_ratio}
+
+            ''' Step 1: Network forward, get detections & embeddings'''
+            with torch.no_grad():
+                output = self.model(im_blob)[-1]
+                hm = output['hm'].sigmoid_()
+                wh = output['wh'] 
+                id_feature = output['id']
+                id_feature = F.normalize(id_feature, dim=1)
+
+                reg = output['reg'] if self.opt.reg_offset else None
+                dets, inds = mot_decode(hm, wh, reg=reg, cat_spec_wh=self.opt.cat_spec_wh, K=self.opt.K)
+                id_feature = _tranpose_and_gather_feat(id_feature, inds)
+                id_feature = id_feature.squeeze(0)
+                id_feature = id_feature.cpu().numpy()
+
+            dets = self.post_process(dets, meta)
+            dets = self.merge_outputs([dets])[1]
+
+            remain_inds = dets[:, 4] > self.opt.conf_thres
+            dets = dets[remain_inds]
+            id_feature = id_feature[remain_inds]
+
+            if len(dets) > 0:
+                '''Detections'''
+                detections = [ModifiedSTrack(ModifiedSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f,
+                freeze_gallery=self.train_mode) for (tlbrs, f) in zip(dets[:, :5], id_feature)]
+            else:
+                detections = []
+        
+            cached_detections = copy.deepcopy(detections)
+
             
         ''' Add newly detected tracklets to tracked_stracks'''
         unconfirmed = []
@@ -293,5 +289,5 @@ class ModifiedJDETracker(JDETracker):
         # logger.debug('Lost: {}'.format([track.track_id for track in lost_stracks]))
         # logger.debug('Removed: {}'.format([track.track_id for track in removed_stracks]))
 
-        return output_stracks
+        return output_stracks, cached_detections
 
