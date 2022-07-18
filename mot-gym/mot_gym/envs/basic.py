@@ -146,24 +146,27 @@ class BasicMotEnv(gym.Env):
 
     def _track_eval(self, eval_frame_id):
         frozen_count = BaseTrack._count
-        forzen_tracks = copy.deepcopy(self.tracker.tracked_stracks)
-        frozen_lost = copy.deepcopy(self.tracker.lost_stracks)
-        frozen_removed = copy.deepcopy(self.tracker.removed_stracks)
+        forzen_tracks = self.tracker.tracked_stracks
+        frozen_lost = self.tracker.lost_stracks
+        frozen_removed = self.tracker.removed_stracks
+
+        self.tracker.tracked_stracks = copy.deepcopy(forzen_tracks)
+        self.tracker.lost_stracks = copy.deepcopy(frozen_lost)
+        self.tracker.removed_stracks = copy.deepcopy(frozen_removed)
 
         frame_id = self.frame_id
         while frame_id < eval_frame_id:
-            frame_id += 1
-            frame_idx = frame_id - 1
+            frame_id += 1; frame_idx = frame_id - 1
             path, img, img0 = self.dataloader[frame_idx]
             blob = torch.from_numpy(img).cuda().unsqueeze(0)
-            tracks = self.tracker.update(blob, img0, frame_id)
+            online_targets = self.tracker.update(blob, img0, frame_id)
 
         BaseTrack._count = frozen_count
         self.tracker.tracked_stracks = forzen_tracks
         self.tracker.lost_stracks = frozen_lost
         self.tracker.removed_stracks = frozen_removed
 
-        return tracks
+        return online_targets
 
     def _add_results(self, results_dict, frame_id, online_targets):
         results_dict.setdefault(frame_id, [])
