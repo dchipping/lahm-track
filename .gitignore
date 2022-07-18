@@ -3,4 +3,3 @@
 *build/
 *.so
 .ipynb_checkpoints/
-# *data/

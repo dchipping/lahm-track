@@ -39,6 +39,3 @@ do
     rm -rf $file
     echo "Deleted:" $file 
 done
-
-# Success!
-# echo "__pycache__ dirs successfully deleted"

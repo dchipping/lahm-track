@@ -7,6 +7,8 @@ import torch
 import copy
 import datetime as dt
 import cv2
+import motmetrics as mm
+from pathlib import Path
 from gym import spaces
 from .bbox_colors import _COLORS
 
@@ -18,6 +20,7 @@ from FairMOT.tracking_utils.io import unzip_objs
 from FairMOT.tracker.basetrack import BaseTrack
 
 
+# TODO: Why last frame gets dif results from rest?
 class BasicMotEnv(gym.Env):
     def __init__(self):
         '''
@@ -33,7 +36,6 @@ class BasicMotEnv(gym.Env):
         0->1. - Detection confidence
         0.->1. - Min cosine similarity
         '''
-        # self.observation_space = spaces.Box(0., 1., shape=(3,), dtype=float)
         self.observation_space = spaces.Box(0., 1., shape=(2,), dtype=float)
 
         # Find gym path
@@ -43,7 +45,7 @@ class BasicMotEnv(gym.Env):
         self.dataloader = None
         self.frame_rate = None
         self.evaluator = None
-        self._load_data('short-seq/10-frames')
+        self._load_data('short-seq/50-frames')
 
         # Initialise FairMOT tracker
         os.environ['CUDA_VISIBLE_DEVICES'] = '0'
@@ -64,7 +66,8 @@ class BasicMotEnv(gym.Env):
         # Only release once first track(s) confirmed
         while not self.online_targets:
             done = self._step_frame()
-            if done: raise Exception('Sequence too short')
+            if done: 
+                raise Exception('Sequence too short')
 
         track = self.online_targets[self.track_idx]
         obs = self._get_obs(track)
@@ -83,7 +86,9 @@ class BasicMotEnv(gym.Env):
         reward = 0
         if self.frame_id < self.seq_len:
             mm_type = self._evaluate(track.track_id, 1)
+            # mm_type = 'LOST'
             reward = self._generate_reward(mm_type)
+            # print(mm_type, reward)
         self.ep_reward += reward
 
         # Move to next frame and generate detections
@@ -128,12 +133,15 @@ class BasicMotEnv(gym.Env):
         else:
             done = True
             self._write_results(self.results, 'mot')
+            self._get_summray()
             return done
 
     def _track_update(self, frame_id):
         frame_idx = frame_id - 1
         path, img, img0 = self.dataloader[frame_idx]
         blob = torch.from_numpy(img).cuda().unsqueeze(0)
+        if self.frame_id == 50:
+            l = 50 % 20
         return self.tracker.update(blob, img0, frame_id)
 
     def _track_eval(self, eval_frame_id):
@@ -206,6 +214,8 @@ class BasicMotEnv(gym.Env):
             return -1
         elif mm_type == 'LOST':
             return 0
+        else:       ### TODO: REMOVE AND HANDLE EXTRA MOT METRICS
+            return 0 ##
 
     def render(self, mode="human"):
         path, img, img0 = self.dataloader[self.frame_id - 1]
@@ -238,7 +248,8 @@ class BasicMotEnv(gym.Env):
 
     def _get_info(self, track):
         tids = {t.track_id for t in self.online_targets}
-        track_info = { "track_id": track.track_id, "gallery_size": len(track.features) }
+        track_info = { "track_id": track.track_id, "gallery_size": len(track.features),
+         "track_idx": self.track_idx }
         seq_info = { "seq_len": self.seq_len, "frame_rate": self.frame_rate }
         return { "curr_frame": self.frame_id, "ep_reward": self.ep_reward, 
         "tracks_ids": tids, "curr_track": track_info, "seq_info": seq_info }
@@ -253,6 +264,7 @@ class BasicMotEnv(gym.Env):
         <frame>, <id>, <bb_left>, <bb_top>, <bb_width>, <bb_height>, <conf>, <x>, <y>, <z>
         '''
         self.data_dir = osp.join(self.gym_path, 'data', seq_path)
+        print(f'Loading data from: {self.data_dir}')
         self.dataloader = datasets.LoadImages(osp.join(self.data_dir, 'img1'))
         meta_info = open(osp.join(self.data_dir, 'seqinfo.ini')).read()
         self.frame_rate = int(meta_info[meta_info.find('frameRate') + 10:meta_info.find('\nseqLength')])
@@ -264,7 +276,7 @@ class BasicMotEnv(gym.Env):
         results_dir = osp.join(self.data_dir, 'results', f'{timestamp}')
         if not osp.exists(results_dir):
             os.makedirs(results_dir)
-        results_file = osp.join(results_dir, 'results.txt')
+        self.results_file = osp.join(results_dir, 'results.txt')
         
         if data_type == 'mot':
             save_format = '{frame},{id},{x1},{y1},{w},{h},1,-1,-1,-1\n'
@@ -273,7 +285,7 @@ class BasicMotEnv(gym.Env):
         else:
             raise ValueError(data_type)
 
-        with open(results_file, 'w') as f:
+        with open(self.results_file, 'w') as f:
             for frame_id, tlwhs, track_ids in results:
                 if data_type == 'kitti':
                     frame_id -= 1
@@ -284,7 +296,27 @@ class BasicMotEnv(gym.Env):
                     x2, y2 = x1 + w, y1 + h
                     line = save_format.format(frame=frame_id, id=track_id, x1=x1, y1=y1, x2=x2, y2=y2, w=w, h=h)
                     f.write(line)
-        print('save results to {}'.format(results_file))
+        print('save results to {}'.format(self.results_file))
+
+    def _get_summray(self):
+        name = Path(self.data_dir).name
+        evaluator = Evaluator(self.data_dir, '', 'mot')
+        acc = evaluator.eval_file(self.results_file)
+        metrics = mm.metrics.motchallenge_metrics
+        mh = mm.metrics.create()
+        summary = mh.compute(
+            acc, 
+            metrics=metrics,
+            name=name
+        )
+
+        strsummary = mm.io.render_summary(
+            summary,
+            formatters=mh.formatters,
+            namemap=mm.io.motchallenge_metric_names,
+        )
+
+        print(strsummary)
 
     @staticmethod
     def _get_gym_path():

@@ -4,6 +4,8 @@
 # Modified by: Daniel Chipping
 # ------------------------------------------------------------------------------
 
+from collections import deque
+
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -17,19 +19,34 @@ from .tracking_utils.utils import *
 import random
 from scipy import spatial
 
-from .tracker.basetrack import BaseTrack, TrackState
+from .tracker.basetrack import TrackState
 from .tracker.multitracker import STrack, JDETracker, joint_stracks, sub_stracks, remove_duplicate_stracks
 
 
+#TODO: track added without feature intially
 class ModifiedSTrack(STrack):
     def __init__(self, tlwh, score, temp_feat, buffer_size=30, freeze_gallery=False):
-        super().__init__(tlwh, score, temp_feat, buffer_size)
-        self.agent = lambda x: random.randint(0,1) #### REPLACE WITH AGENT ####
+        self._tlwh = np.asarray(tlwh, dtype=np.float)
+        self.kalman_filter = None
+        self.mean, self.covariance = None, None
+        self.is_activated = False
+
+        self.score = score
+        self.tracklet_len = 0
+
+        self.agent = lambda x: random.randint(0,1) #### REPLACE WITH AGENT FILE ####
         self.freeze_gallery = freeze_gallery
-        self.obs = None
-        # self.update_features(temp_feat, None, force=True)
+        
+        temp_feat /= np.linalg.norm(temp_feat)
+        self.obs = self.init_observation(temp_feat)
+        self.curr_feat = temp_feat
+        self.smooth_feat = temp_feat
+        self.features = deque([], maxlen=buffer_size)
+        # self.features = None
+        self.alpha = 0.9
  
     def min_gallery_similarity(self, feat):
+        feat /= np.linalg.norm(feat)
         feature_idx = None
         min_cosine_similarity = 1
         for idx, gallery_feat in enumerate(self.features):
@@ -40,27 +57,47 @@ class ModifiedSTrack(STrack):
         return min_cosine_similarity, feature_idx
 
     def get_observation(self, new_track):
-        self.curr_feat /= np.linalg.norm(self.curr_feat)
         similarity, _ = self.min_gallery_similarity(new_track.curr_feat)
         return np.array([new_track.score, similarity], dtype=float)
 
+    def init_observation(self, temp_feat):
+        similarity, _ = self.min_gallery_similarity(temp_feat)
+        return np.array([self.score, similarity], dtype=float)
+
+    # Moving average like so:
+    # ((a*0.9 + b*0.1)*0.9 + c*0.1)0.9 * d*0.1 = a*0.9^3 + b*0.1*0.9^2 + c*0.1*0.9 + d*0.1
     def update_gallery(self, action, feat):
         '''Translate action to change in gallery'''
-        feat /= np.linalg.norm(feat)
         if action == 1:
+            # feat = np.expand_dims(feat, axis=1)
+            # if not self.features:
+            #   self.features = feat
+            # else:
+            #   self.features = np.append(self.features, feat, axis=1)
+            # _, l = self.features.shape
+            # alphas = np.power(np.full((l,), 0.9), np.arange(l-1,-1,-1))
+            # betas = np.full((l,), 0.1); betas[0] = 1;
+            # weights = alphas * betas
+            # self.smooth_feat = self.features @ weights
+            
             self.features.append(feat)
-            for feat in self.features:
-                self.smooth_feat = self.alpha * self.smooth_feat + (1 - self.alpha) * feat
+            # for i, feat in enumerate(self.features): # Recalculate gallery each update
+            #     if i == 0:
+            #         self.smooth_feat = feat
+            #     else:
+            #         self.smooth_feat = self.alpha * self.smooth_feat + (1 - self.alpha) * feat
+            self.smooth_feat = self.alpha * self.smooth_feat + (1 - self.alpha) * feat
             self.smooth_feat /= np.linalg.norm(self.smooth_feat)
         elif action == 0:
             pass
-        # self.smooth_feat = np.average(self.features, axis=0)
-        # self.smooth_feat /= np.linalg.norm(self.smooth_feat)
 
     def agent_update_features(self, feat, obs):
         '''New method added for RL agent to manage gallery'''
+        feat /= np.linalg.norm(feat)
+        self.curr_feat = feat
         if not self.freeze_gallery:
-            action = self.agent.compute_single_action(obs)
+            # action = self.agent.compute_single_action(obs) #### REPLACE WITH AGENT FILE ####
+            action = 1
             self.update_gallery(action, feat)
     
     def re_activate(self, new_track, frame_id, new_id=False):
@@ -106,6 +143,10 @@ class ModifiedJDETracker(JDETracker):
 
     def update(self, im_blob, img0, frame_id):
         self.frame_id = frame_id # self.frame_id += 1
+        activated_starcks = []
+        refind_stracks = []
+        lost_stracks = []
+        removed_stracks = []
 
         width = img0.shape[1]
         height = img0.shape[0]
@@ -151,16 +192,11 @@ class ModifiedJDETracker(JDETracker):
 
         if len(dets) > 0:
             '''Detections'''
-            detections = [ModifiedSTrack(ModifiedSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f, 30, 
-            self.train_mode) for (tlbrs, f) in zip(dets[:, :5], id_feature)]
+            detections = [ModifiedSTrack(ModifiedSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f,
+            freeze_gallery=self.train_mode) for (tlbrs, f) in zip(dets[:, :5], id_feature)]
         else:
             detections = []
             
-        activated_starcks = []
-        refind_stracks = []
-        lost_stracks = []
-        removed_stracks = []
-
         ''' Add newly detected tracklets to tracked_stracks'''
         unconfirmed = []
         tracked_stracks = []  # type: list[STrack]
