@@ -10,6 +10,7 @@ import copy
 import numpy as np
 import torch
 import torch.nn.functional as F
+from ray.rllib.agents import ppo
 from .models import *
 from .models.decode import mot_decode
 from .models.utils import _tranpose_and_gather_feat
@@ -23,8 +24,13 @@ from scipy import spatial
 from .tracker.basetrack import TrackState
 from .tracker.multitracker import STrack, JDETracker, joint_stracks, sub_stracks, remove_duplicate_stracks
 
+class GreedyAgent:
+    @staticmethod
+    def compute_single_action(obs):
+        return 1
+
 class ModifiedSTrack(STrack):
-    def __init__(self, tlwh, score, temp_feat, freeze_gallery=False):
+    def __init__(self, tlwh, score, temp_feat, agent=GreedyAgent()):
         self._tlwh = np.asarray(tlwh, dtype=np.float)
         self.kalman_filter = None
         self.mean, self.covariance = None, None
@@ -33,15 +39,14 @@ class ModifiedSTrack(STrack):
         self.score = score
         self.tracklet_len = 0
 
-        self.agent = lambda x: random.randint(0,1) #### REPLACE WITH AGENT FILE ####
-        self.freeze_gallery = freeze_gallery
+        self.freeze_gallery = True if agent is None else False
+        self.agent = agent
         
         temp_feat /= np.linalg.norm(temp_feat)
         self.obs = self.init_observation(temp_feat)
         self.curr_feat = temp_feat
         self.smooth_feat = temp_feat
         self.features = deque([])
-        # self.features = None
         self.alpha = 0.9
  
     def min_gallery_similarity(self, feat):
@@ -63,8 +68,6 @@ class ModifiedSTrack(STrack):
         similarity, _ = self.min_gallery_similarity(temp_feat)
         return np.array([self.score, similarity], dtype=float)
 
-    # Moving average like so:
-    # ((a*0.9 + b*0.1)*0.9 + c*0.1)0.9 * d*0.1 = a*0.9^3 + b*0.1*0.9^2 + c*0.1*0.9 + d*0.1
     def update_gallery(self, action, feat):
         '''Translate action to change in gallery'''
         if action == 1:
@@ -74,20 +77,7 @@ class ModifiedSTrack(STrack):
                     self.smooth_feat = feat
                 else:
                     self.smooth_feat = self.alpha * self.smooth_feat + (1 - self.alpha) * feat
-
-            # # Vectorised approach, requires self.features = None
-            # feat = np.expand_dims(feat, axis=1)
-            # if not self.features:
-            #   self.features = feat
-            # else:
-            #   self.features = np.append(self.features, feat, axis=1)
-            # _, l = self.features.shape
-            # alphas = np.power(np.full((l,), 0.9), np.arange(l-1,-1,-1))
-            # betas = np.full((l,), 0.1); betas[0] = 1;
-            # weights = alphas * betas
-            # self.smooth_feat = self.features @ weights
-
-            self.smooth_feat /= np.linalg.norm(self.smooth_feat)
+                self.smooth_feat /= np.linalg.norm(self.smooth_feat)
         elif action == 0:
             pass
 
@@ -96,8 +86,7 @@ class ModifiedSTrack(STrack):
         feat /= np.linalg.norm(feat)
         self.curr_feat = feat
         if not self.freeze_gallery:
-            # action = self.agent.compute_single_action(obs) #### REPLACE WITH AGENT FILE ####
-            action = 1
+            action = self.agent.compute_single_action(obs)
             self.update_gallery(action, feat)
     
     def re_activate(self, new_track, frame_id, new_id=False):
@@ -137,9 +126,20 @@ class ModifiedSTrack(STrack):
 
 
 class ModifiedJDETracker(JDETracker):
-    def __init__(self, opt, frame_rate=30, train_mode=False):
+    def __init__(self, opt, frame_rate=30, agent_path=None):
         super().__init__(opt, frame_rate)
-        self.train_mode = train_mode
+        self.agent = self.build_agent(agent_path)
+
+    def build_agent(self, agent_path):
+        if not agent_path:
+            print("Starting tracking in train mode, this will freeze the gallery")
+            return None
+        config = ppo.DEFAULT_CONFIG.copy()
+        config["num_gpus"] = self.opt.gpus[0]
+        config["num_workers"] = 1
+        trainer = ppo.PPOTrainer(config=config, env="mot_gym:BasicMOT-v0")
+        trainer.restore(agent_path)
+        return trainer
 
     def update(self, im_blob, img0, frame_id, cached_detections=None):
         self.frame_id = frame_id # self.frame_id += 1
@@ -185,13 +185,12 @@ class ModifiedJDETracker(JDETracker):
 
             if len(dets) > 0:
                 '''Detections'''
-                detections = [ModifiedSTrack(ModifiedSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f,
-                freeze_gallery=self.train_mode) for (tlbrs, f) in zip(dets[:, :5], id_feature)]
+                detections = [ModifiedSTrack(ModifiedSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f, 
+                agent=self.agent) for (tlbrs, f) in zip(dets[:, :5], id_feature)]
             else:
                 detections = []
         
             cached_detections = copy.deepcopy(detections)
-
             
         ''' Add newly detected tracklets to tracked_stracks'''
         unconfirmed = []
@@ -290,4 +289,3 @@ class ModifiedJDETracker(JDETracker):
         # logger.debug('Removed: {}'.format([track.track_id for track in removed_stracks]))
 
         return output_stracks, cached_detections
-

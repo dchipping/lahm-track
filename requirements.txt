@@ -1,0 +1,3 @@
+# pip install -e mot-gym
+gym
+ray[rllib]

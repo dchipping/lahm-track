@@ -41,13 +41,14 @@ class BasicMotEnv(gym.Env):
         self.gym_path = self._get_gym_path()
         
         # Load seq data and gt
-        self._load_data('short-seq/50-frames')
+        # self._load_data()
+        self._load_data('short-seq/last-100')
 
         # Initialise FairMOT tracker
         os.environ['CUDA_VISIBLE_DEVICES'] = '0'
         model_path = self._get_model_path('all_dla34.pth')
         self.opt = opts().init(['mot', f'--load_model={model_path}'])
-        self.tracker = Tracker(self.opt, self.frame_rate, train_mode=True)
+        self.tracker = Tracker(self.opt, self.frame_rate)
 
         # Additional variables
         self.first_render = True
@@ -111,10 +112,21 @@ class BasicMotEnv(gym.Env):
         results = {}
         self._add_results(results, self.frame_id, self.online_targets)
         self._add_results(results, self.frame_id + 1, next_targets)
-        events = self._evalute(results).loc[1]
+        events = self._evalute(results)#.loc[1]
+
+        self.events = events
+
+        events = events.loc[1]
         
         # Calculate reward
         track_event = events[events['HId'] == track_id]
+
+        self.track_event = track_event
+        for event in track_event['Type'].values:
+            if event in {'SWITCH', 'TRANSFER', 'ASCEND', 'MIGRATE'}:
+                l = 102 % 23
+                l +=1
+
         mm_type = track_event['Type'].values[0] if track_event.size else 'LOST'
         return mm_type
 
@@ -194,24 +206,37 @@ class BasicMotEnv(gym.Env):
             trk_tlwhs, trk_ids = unzip_objs(trk_objs)[:2]
             self.evaluator.eval_frame(frame_id, trk_tlwhs, trk_ids, rtn_events=False)
 
-        events = self.evaluator.acc.events
-        return events[events['Type'] != 'RAW']
+        events = self.evaluator.acc.mot_events
+        return events
 
     def _generate_reward(self, mm_type):
         '''
-        Possible Events: ['RAW', 'FP', 'MISS', 'SWITCH',
-        'MATCH', 'TRANSFER', 'ASCEND', 'MIGRATE']
+        Each event type is one of the following
+        - `'MATCH'` a match between a object and hypothesis was found
+        - `'SWITCH'` a match but differs from previous assignment (hypothesisid != previous) (relative to Hypo)
+        - `'MISS'` no match for an object was found
+        - `'FP'` no match for an hypothesis was found (spurious detections)
+        - `'RAW'` events corresponding to raw input
+        - `'TRANSFER'` a match but differs from previous assignment (objectid != previous) (relative to Obj)
+        - `'ASCEND'` a match but differs from previous assignment  (hypothesisid is new) (relative to Obj)
+        - `'MIGRATE'` a match but differs from previous assignment  (objectid is new) (relative to Hypo)
         '''
         if mm_type == 'MATCH':
             return 1
         elif mm_type == 'SWITCH':
             return -1
+        elif mm_type == 'TRANSFER':
+            return -1
+        elif mm_type == 'ASCEND':
+            return -1
+        elif mm_type == 'MIGRATE':
+            return -1
         elif mm_type == 'FP':
             return -1
         elif mm_type == 'LOST':
             return 0
-        else:       ### TODO: REMOVE AND HANDLE EXTRA MOT METRICS
-            return 0 ##
+        else:
+            raise Exception('Unkown track type')
 
     def render(self, mode="human"):
         path, img, img0 = self.dataloader[self.frame_id - 1]
