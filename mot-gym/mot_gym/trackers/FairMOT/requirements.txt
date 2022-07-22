@@ -1,18 +1,13 @@
-# FairMOT Steps:
-# conda install pytorch==1.2.0 torchvision==0.4.0 cudatoolkit=10.0 -c pytorch
-# conda install Cython
-# pip install -r requirements.txt
-# ./init_model.sh
 yacs
 opencv-python
+PyYAML
 cython-bbox
 scipy
-numba
 progress
 motmetrics
-numba
 matplotlib
 lap
 openpyxl
-Pillow==6.2.2
+Pillow
 tensorboardX
+fvcore

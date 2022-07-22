@@ -5,3 +5,7 @@
 .ipynb_checkpoints/
 .prof_stats
 profiling_stats.txt
+results/
+*.pth
+videos/
+*.npz

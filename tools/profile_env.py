@@ -4,9 +4,8 @@ import cProfile
 from pstats import Stats
 
 os.unsetenv("SESSION_MANAGER")
-env = gym.make("mot_gym:BasicMOT-v0")
-obs, info = env.reset()
-print(f"Frame: {info['curr_frame']}, TrackIDs: {info['tracks_ids']}")
+env = gym.make("mot_gym:BasicMOT-v1")
+obs = env.reset()
 
 pr = cProfile.Profile()
 pr.enable()
