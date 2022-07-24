@@ -1,25 +1,25 @@
+import copy
+import datetime as dt
 import os
 import os.path as osp
 import time
+from pathlib import Path
+
+import cv2
+import datasets.dataset.jde as datasets
 import gym
+import motmetrics as mm
 import numpy as np
 import torch
-import copy
-import datetime as dt
-import cv2
-import motmetrics as mm
-from pathlib import Path
-from gym import spaces
-
 import FairMOT.src._init_paths
-import datasets.dataset.jde as datasets
+from gym import spaces
 from opts import opts
+from tracker.basetrack import BaseTrack
 from tracking_utils.evaluation import Evaluator
 from tracking_utils.io import unzip_objs
-from tracker.basetrack import BaseTrack
 
-from .modified2_FairMOT import ModifiedJDETracker as Tracker
 from ..bbox_colors import _COLORS
+from .modified2_FairMOT import ModifiedJDETracker as Tracker
 
 
 class BasicMotEnv(gym.Env):
@@ -311,6 +311,7 @@ class BasicMotEnv(gym.Env):
         meta_info = open(osp.join(self.data_dir, 'seqinfo.ini')).read()
         self.frame_rate = int(meta_info[meta_info.find('frameRate') + 10:meta_info.find('\nseqLength')])
         self.seq_len = int(meta_info[meta_info.find('seqLen') + 10:meta_info.find('\nimWidth')])
+        meta_info.close()
 
         self.evaluator = Evaluator(self.data_dir, '', 'mot')
 

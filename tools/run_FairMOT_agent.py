@@ -1,25 +1,23 @@
+import argparse
+import datetime as dt
+import logging
 import os
 import os.path as osp
+
 import cv2
-import logging
-import argparse
+import FairMOT.src._init_paths
+import datasets.dataset.jde as datasets
+import mot_gym
 import motmetrics as mm
 import numpy as np
 import torch
-import datetime as dt
-
-import mot_gym
-import FairMOT.src._init_paths
-
 from mot_gym.envs.FairMOT.modified_FairMOT import ModifiedJDETracker
+from opts import opts
 from tracking_utils import visualization as vis
+from tracking_utils.evaluation import Evaluator
 from tracking_utils.log import logger
 from tracking_utils.timer import Timer
-from tracking_utils.evaluation import Evaluator
-import datasets.dataset.jde as datasets
-
 from tracking_utils.utils import mkdir_if_missing
-from opts import opts
 
 
 def write_results(filename, results, data_type):

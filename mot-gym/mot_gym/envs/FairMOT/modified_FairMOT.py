@@ -23,6 +23,7 @@ class GreedyAgent:
     def compute_single_action(obs):
         return 1
 
+
 class ModifiedSTrack(STrack):
     def __init__(self, tlwh, score, temp_feat, agent=GreedyAgent()):
         self._tlwh = np.asarray(tlwh, dtype=np.float)
@@ -35,14 +36,14 @@ class ModifiedSTrack(STrack):
 
         self.freeze_gallery = True if agent is None else False
         self.agent = agent
-        
+       
         temp_feat /= np.linalg.norm(temp_feat)
         self.obs = self.init_observation(temp_feat)
         self.curr_feat = temp_feat
         self.smooth_feat = temp_feat
         self.features = deque([])
         self.alpha = 0.9
- 
+
     def min_gallery_similarity(self, feat):
         feat /= np.linalg.norm(feat)
         feature_idx = None
