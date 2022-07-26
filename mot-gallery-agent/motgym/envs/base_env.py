@@ -41,7 +41,7 @@ class BasicMotEnv(gym.Env):
         self.results = []
 
     def _reset_seq(self):
-        self.seq = self.seqs[random.randint(0, len(self.seqs))]
+        self.seq = self.seqs[random.randint(0, len(self.seqs) - 1)]
         print(f'Loading data from: {osp.join(self.data_dir, self.seq)}')
         self._load_dataset(self.seq)
         self._load_detections(self.seq)

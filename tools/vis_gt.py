@@ -2,16 +2,16 @@ import csv
 import os
 import os.path as osp
 from collections import defaultdict
+
 import cv2
-import mot_gym
-from FairMOT.src.lib.tracking_utils.visualization import plot_tracking
+from motgym.envs.base_env import BasicMotEnv
 
 # gt_path = '/home/dchipping/project/dan-track/mot-gym/mot_gym/data/MOT17/train/MOT17-05/gt/gt.txt'
 # gt_path = '/home/dchipping/project/dan-track/results/agent-2022-07-22T07-19-48/MOT17-05.txt'
-gt_path = '/home/dchipping/project/dan-track/results/baseline-2022-07-21T23-20-29/MOT17-05.txt'
-data_dir = '/home/dchipping/project/dan-track/mot-gym/mot_gym/data/MOT17/train/MOT17-05'
-# output_dir = '/home/dchipping/project/dan-track/mot-gym/mot_gym/data/MOT17/outputs/gt-imgs'
-output_dir = '/home/dchipping/project/dan-track/mot-gym/mot_gym/data/MOT17/outputs/baseline'
+# gt_path = '/home/dchipping/project/dan-track/results/baseline-2022-07-21T23-20-29/MOT17-05.txt'
+# data_dir = '/home/dchipping/project/dan-track/mot-gym/mot_gym/data/MOT17/train/MOT17-05'
+output_dir = '/home/dchipping/project/dan-track/mot-gym/mot_gym/data/MOT17/outputs/gt-imgs'
+# output_dir = '/home/dchipping/project/dan-track/mot-gym/mot_gym/data/MOT17/outputs/baseline'
 if not osp.exists(output_dir):
     os.makedirs(output_dir)
 
@@ -36,7 +36,8 @@ for i, file in enumerate(img_files):
     img0 = cv2.imread(img_path)
     tids = gt_tids[frame_id]
     tlwhs = gt_tlwh[frame_id]
-    online_im = plot_tracking(img0, tlwhs, tids, frame_id=frame_id, fps=0.)
+    for idx, tid, tlwh in enumerate(zip(tids, tlwhs)):
+        img0 = BasicMotEnv._visualize_box(img0, str(tid), tlwh, idx)
     save = os.path.join(output_dir, '{:05d}.jpg'.format(frame_id))
     print(save)
-    cv2.imwrite(save, online_im)
+    cv2.imwrite(save, img0)

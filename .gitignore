@@ -1,3 +1,4 @@
+.vscode/
 *__pycache__/
 *egg-info/
 *build/
@@ -8,4 +9,3 @@ profiling_stats.txt
 results/
 *.pth
 videos/
-*.npz

@@ -227,7 +227,7 @@ class ModifiedJDETracker():
         config["num_gpus"] = 1#self.opt.gpus[0]
         config["framework"] = "torch"
         # trainer = ppo.PPOTrainer(config=config, env="motgym:Mot17Env-v0")
-        trainer = dqn.DQNTrainer(config=config, env="motgym:Mot17Env-v0")
+        trainer = dqn.DQNTrainer(config=config, env="motgym:Mot17ParallelEnv-v0")
         trainer.restore(agent_path)
         return trainer
 
@@ -237,7 +237,7 @@ class ModifiedJDETracker():
         lost_stracks = []
         removed_stracks = []
 
-        ### Detections and features are pre-generated using gen_FairMOT_jde.py ###
+        ### Detections and features are pre-generated using gen_fairmot_jde.py ###
 
         if len(dets) > 0:
             '''Detections'''

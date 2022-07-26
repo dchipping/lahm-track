@@ -1,6 +1,6 @@
 import gym
 
-env = gym.make("motgym:Mot17Env-v0")
+env = gym.make("motgym:Mot17Env-v1")
 obs = env.reset()
 env.render()
 
