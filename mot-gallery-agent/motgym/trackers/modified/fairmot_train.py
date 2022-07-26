@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 
 from collections import deque
-from ray.rllib.agents import ppo
+from ray.rllib.agents import ppo, dqn
 from scipy import spatial
 
 import FairMOT.src._init_paths
@@ -39,23 +39,20 @@ class ModifiedSTrack(BaseTrack):
         self.features = deque([], maxlen=100)
         self.alpha = 0.9
  
-    def min_gallery_similarity(self, feat):
+    def gallery_similarity(self, feat):
         feat /= np.linalg.norm(feat)
-        feature_idx = None
-        min_cosine_similarity = 1
-        for idx, gallery_feat in enumerate(self.features):
-            similarity = 1. - spatial.distance.cosine(feat, gallery_feat)
-            if similarity < min_cosine_similarity:
-                min_cosine_similarity = similarity
-                feature_idx = idx
-        return min_cosine_similarity, feature_idx
+        max_cosine_simlarity = -1
+        if self.features:
+            dists = spatial.distance.cdist(np.array([feat]), np.asarray(self.features), 'cosine')
+            max_cosine_simlarity = np.max(np.ones(dists.shape) - dists)
+        return max_cosine_simlarity
 
     def get_observation(self, new_track):
-        similarity, _ = self.min_gallery_similarity(new_track.curr_feat)
+        similarity = self.gallery_similarity(new_track.curr_feat)
         return np.array([new_track.score, similarity, len(self.features)], dtype=float)
 
     def init_observation(self, temp_feat):
-        similarity, _ = self.min_gallery_similarity(temp_feat)
+        similarity = self.gallery_similarity(temp_feat)
         return np.array([self.score, similarity, 0], dtype=float)
 
     def update_gallery(self, action, feat):
@@ -225,11 +222,12 @@ class ModifiedJDETracker():
         if not agent_path:
             print("Starting tracker in RL train mode, this will freeze the gallery")
             return None
-        config = ppo.DEFAULT_CONFIG.copy()
-        config["num_gpus"] = 0#self.opt.gpus[0]
-        config["num_workers"] = 1
+        # config = ppo.DEFAULT_CONFIG.copy()
+        config = dqn.DEFAULT_CONFIG.copy()
+        config["num_gpus"] = 1#self.opt.gpus[0]
         config["framework"] = "torch"
-        trainer = ppo.PPOTrainer(config=config, env="mot_gym:BasicMOT-v1")
+        # trainer = ppo.PPOTrainer(config=config, env="motgym:Mot17Env-v0")
+        trainer = dqn.DQNTrainer(config=config, env="motgym:Mot17Env-v0")
         trainer.restore(agent_path)
         return trainer
 

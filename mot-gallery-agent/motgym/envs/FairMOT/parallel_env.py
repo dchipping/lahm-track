@@ -24,11 +24,11 @@ class ParallelFairmotEnv(BasicMotEnv):
         '''
         Observation Space: [1., 1., 100.]
         0. -> 1. - Detection confidence
-        0. -> 1. - Min cosine similarity
+        0. -> 1. - Max cosine similarity
         0. -> 100. - Feature gallery size
         '''
         self.observation_space = spaces.Box(
-            np.array([0., 0., 0.]), np.array([1., 1., 100.]), shape=(3,), dtype=float)
+            np.array([0., -1., 0.]), np.array([1., 1., 100.]), shape=(3,), dtype=float)
 
         self.tracker_args = opts().init(['mot'])
 
@@ -57,6 +57,8 @@ class ParallelFairmotEnv(BasicMotEnv):
         done = False
         if self.frame_id < self.seq_len:
             self.frame_id += 1
+            if self.frame_id % 100 == 0:
+                print(f'=== {self.seq}: Frame {self.frame_id} ===')
             self.online_targets = self._track_update(self.frame_id)
             self._save_results(self.frame_id)
             return done
@@ -159,10 +161,14 @@ class ParallelFairmotEnv(BasicMotEnv):
         - `'ASCEND'` a match but differs from previous assignment  (hypothesisid is new) (relative to Obj)
         - `'MIGRATE'` a match but differs from previous assignment  (objectid is new) (relative to Hypo)
         '''
+        reward = 0
         if 'SWITCH' in mm_types:
-            return -1000
+            reward += -1000
         else:
-            return 1
+            reward += 1
+        if len(track.features) > 30:
+            reward += -1000
+        return reward
 
     @BasicMotEnv.calc_fps
     def step(self, action):

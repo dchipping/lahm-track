@@ -5,19 +5,21 @@ import os
 import os.path as osp
 
 import cv2
-import FairMOT.src._init_paths
-import datasets.dataset.jde as datasets
-import mot_gym
 import motmetrics as mm
 import numpy as np
 import torch
-from mot_gym.envs.FairMOT.modified_FairMOT import ModifiedJDETracker
+
+import motgym
+import FairMOT.src._init_paths
+import datasets.dataset.jde as datasets
 from opts import opts
 from tracking_utils import visualization as vis
 from tracking_utils.evaluation import Evaluator
 from tracking_utils.log import logger
 from tracking_utils.timer import Timer
 from tracking_utils.utils import mkdir_if_missing
+
+from modified.fairmot import AgentJDETracker
 
 
 def write_results(filename, results, data_type):
@@ -67,7 +69,7 @@ def write_results_score(filename, results, data_type):
 def eval_seq(opt, dataloader, data_type, result_filename, save_dir=None, show_image=True, frame_rate=30, use_cuda=True):
     if save_dir:
         mkdir_if_missing(save_dir)
-    tracker = ModifiedJDETracker(opt, frame_rate=frame_rate, agent_path=opt.agent_path)
+    tracker = AgentJDETracker(opt, frame_rate=frame_rate, agent_path=opt.agent_path)
     timer = Timer()
     results = []
     frame_id = 0
@@ -167,14 +169,14 @@ def main(opt, data_root='/data/MOT16/train', det_root=None, seqs=('MOT16-05',), 
 
 
 if __name__ == '__main__':
-    # os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-    model_path = '/home/dchipping/project/dan-track/mot-gym/mot_gym/trackers/FairMOT/models/fairmot_dla34.pth'
-    agent_path = '/home/dchipping/ray_results/default/PPO_mot_gym:BasicMOT-v1_cced9_00000_0_2022-07-22_06-47-41/checkpoint_000008/checkpoint-8'
+    model_path = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/trackers/FairMOT/models/fairmot_dla34.pth'
+    agent_path = '/home/dchipping/ray_results/default/DQN_motgym:Mot17Env-v0_e3037_00000_0_2022-07-26_05-53-27/checkpoint_000035/checkpoint-35'
     exp_name = 'agent-{}'.format(dt.datetime.now().strftime("%Y-%m-%dT%H-%M-%S"))
-    data_dir = '/home/dchipping/project/dan-track/mot-gym/mot_gym/data'
+    data_dir = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/datasets'
     save_dir = os.path.join(os.getcwd(), exp_name)
 
-    opt = opts().init(['mot', f'--data_dir={data_dir}', f'--load_model={model_path}', '--MOT17_05=True', f'--exp_name={exp_name}', f'--agent_path={agent_path}'])
+    opt = opts().init(['mot', f'--data_dir={data_dir}', f'--load_model={model_path}', '--val_mot17=True',
+                         f'--exp_name={exp_name}', f'--agent_path={agent_path}'])
 
     if not opt.val_mot16:
         seqs_str = '''KITTI-13
@@ -228,14 +230,14 @@ if __name__ == '__main__':
                       MOT17-14-SDP'''
         data_root = os.path.join(opt.data_dir, 'MOT17/images/test')
     if opt.val_mot17:
-        seqs_str = '''MOT17-02-SDP
-                      MOT17-04-SDP
-                      MOT17-05-SDP
-                      MOT17-09-SDP
-                      MOT17-10-SDP
-                      MOT17-11-SDP
-                      MOT17-13-SDP'''
-        data_root = os.path.join(opt.data_dir, 'MOT17/images/train')
+        seqs_str = '''MOT17-02
+                      MOT17-04
+                      MOT17-05
+                      MOT17-09
+                      MOT17-10
+                      MOT17-11
+                      MOT17-13'''
+        data_root = os.path.join(opt.data_dir, 'MOT17/val_half')
     if opt.val_mot15:
         seqs_str = '''Venice-2
                       KITTI-13

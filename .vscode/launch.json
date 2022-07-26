@@ -19,14 +19,14 @@
             "type": "python",
             "python": "/home/dchipping/miniconda3/envs/FairMOT/bin/python3",
             "request": "launch",
-            "program": "./mot-gym/mot_gym/trackers/FairMOT/src/track.py",
+            "program": "./mot-gallery-agent/motgym/trackers/FairMOT/src/track.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
                 "mot",
-                "--MOT17_05=True",
-                "--load_model=/home/dchipping/project/dan-track/mot-gym/mot_gym/trackers/FairMOT/models/fairmot_dla34.pth",
-                "--data_dir=/home/dchipping/project/dan-track/mot-gym/mot_gym/data"
+                "--val_mot17=True",
+                "--load_model=/home/dchipping/project/dan-track/mot-gallery-agent/motgym/trackers/FairMOT/models/fairmot_dla34.pth",
+                "--data_dir=/home/dchipping/project/dan-track/mot-gallery-agent/motgym/datasets"
             ]
         }
     ]

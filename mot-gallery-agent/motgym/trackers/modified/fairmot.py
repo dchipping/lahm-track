@@ -14,7 +14,7 @@ from tracking_utils.utils import *
 from utils.post_process import ctdet_post_process
 
 
-class JDETracker(ModifiedJDETracker):
+class AgentJDETracker(ModifiedJDETracker):
     def __init__(self, opt, frame_rate=30, agent_path=None):
         self.opt = opt
         if opt.gpus[0] >= 0:
