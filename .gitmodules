@@ -1,11 +1,11 @@
 # git submodule update --init
 
 [submodule "deep_sort"]
-	path = public
+	path = mot-gallery-agent/motgym/trackers/deep_sort
 	url = https://github.com/nwojke/deep_sort.git
-	branch = main
+	ignore = dirty
 
 [submodule "FairMOT"]
-	path = public
+	path = mot-gallery-agent/motgym/trackers/FairMOT
 	url = https://github.com/ifzhang/FairMOT.git
-	branch = main
+	ignore = dirty
