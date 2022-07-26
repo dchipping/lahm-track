@@ -1,4 +1,4 @@
-## mot-gym
-1) `cd path/to/mot-gym`
-2) `pip install -e mot-gym`
-3) `pip install Cython`
+## MOT MSc Project
+
+- Tools for benchmarking and visualising tracking
+- Includes mot-gallery-agent

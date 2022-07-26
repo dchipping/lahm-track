@@ -4,4 +4,5 @@
     "python.analysis.diagnosticSeverityOverrides": {
         "reportMissingImports": "none",
     },
+    "editor.tabSize": 4
 }
