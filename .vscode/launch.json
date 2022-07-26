@@ -4,14 +4,30 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
-            "name": "dan-track env",
+            "name": "FairMOT env",
             "type": "python",
-            "python": "/home/dchipping/miniconda3/envs/dan-track/bin/python3",
+            "python": "/home/dchipping/miniconda3/envs/FairMOT/bin/python3",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
+        },
+        {
+            "name": "Run FairMOT",
+            "type": "python",
+            "python": "/home/dchipping/miniconda3/envs/FairMOT/bin/python3",
+            "request": "launch",
+            "program": "./mot-gallery-agent/motgym/trackers/FairMOT/src/track.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "mot",
+                "--val_mot17=True",
+                "--load_model=/home/dchipping/project/dan-track/mot-gallery-agent/motgym/trackers/FairMOT/models/fairmot_dla34.pth",
+                "--data_dir=/home/dchipping/project/dan-track/mot-gallery-agent/motgym/datasets"
+            ]
         }
     ]
 }
