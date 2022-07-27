@@ -120,12 +120,13 @@ def visualize_box(img, text, box, color_index):
 
 if __name__ == "__main__":
     data_dir = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/datasets/MOT17/val_half'
+    results_dir = '/home/dchipping/project/dan-track/results/fairmot_mot17_val_half/2022-07-27T11-29-26'
 
-    output_dir = '/home/dchipping/project/dan-track/videos/gt_images'
+    output_dir = '/home/dchipping/project/dan-track/videos/images'
 
-    seqs = os.listdir(data_dir)
+    seqs = [seq.stem for seq in map(Path, os.listdir(results_dir)) if seq.suffix == '.txt']
     for seq in seqs:
-        p = Path(data_dir)
+        p = Path(results_dir)
         img_output_dir = osp.join(output_dir, p.parent.name, p.name, seq)
         os.makedirs(img_output_dir, exist_ok=True)
 
@@ -134,7 +135,7 @@ if __name__ == "__main__":
 
         tids = defaultdict(list)
         tlwhs = defaultdict(list)
-        results_path = osp.join(data_dir, seq, 'gt', 'gt.txt')
+        results_path = osp.join(results_dir, f'{seq}.txt')
         with open(results_path) as f:
             reader = csv.reader(f)
             for row in reader:

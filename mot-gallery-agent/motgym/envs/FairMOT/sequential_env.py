@@ -90,7 +90,9 @@ class SequentialFairmotEnv(BasicMotEnv):
         }
 
     def reset(self):
-        self._reset_seq()
+        print(f'Loading data from: {osp.join(self.data_dir, self.seq)}')
+        self._load_dataset(self.seq)
+        self._load_detections(self.seq)
         self._reset_state()
 
         gts = self.evaluator.gt_frame_dict.items()
@@ -114,3 +116,4 @@ class Mot17SequentialEnv(SequentialFairmotEnv):
         dataset = 'MOT17/train_half'
         detections = 'FairMOT/MOT17/train_half'
         super().__init__(dataset, detections)
+        self.seq = self.seqs[0]
