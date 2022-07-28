@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 from gym import spaces
 import FairMOT.src._init_paths
-from modified.fairmot_train import ModifiedJDETracker as Tracker
+from modified.fairmot_train import TrainAgentJDETracker as Tracker
 from opts import opts
 from tracker.basetrack import BaseTrack
 
@@ -61,13 +61,12 @@ class ParallelFairmotEnv(BasicMotEnv):
                 print(f'=== {self.seq}: Frame {self.frame_id} ===')
             self.online_targets = self._track_update(self.frame_id)
             self._save_results(self.frame_id)
-            return done
         else:
             done = True
             results_file = osp.join(self.results_dir, f'{self.seq}.txt')
             BasicMotEnv._write_results(self.results, results_file, 'mot')
             BasicMotEnv._get_summary(self.evaluator, self.seq, results_file)
-            return done
+        return done
 
     def _get_obs(self, track):
         return track.obs
@@ -88,11 +87,16 @@ class ParallelFairmotEnv(BasicMotEnv):
             "seq_info": seq_info
         }
 
+    def _reset_state(self):
+        self.frame_id = 1
+        self.track_idx = 0
+        BaseTrack._count = 0
+        self.tracker = Tracker(self.tracker_args, self.frame_rate)
+
     def reset(self):
         self._reset_seq()
+        self._reset_env()
         self._reset_state()
-        BaseTrack._count  = 0
-        self.tracker = Tracker(self.tracker_args, self.frame_rate)
 
         self.online_targets = self._track_update(self.frame_id)
         # Only release loop once the first track(s) confirmed
@@ -206,12 +210,12 @@ class ParallelFairmotEnv(BasicMotEnv):
         self._init_rendering(img0.shape)
 
         # Add bounding box for each track in frame
-        for idx in range(len(self.online_targets)):
-            track = self.online_targets[idx]
+        curr_track = self.online_targets[self.track_idx]
+        for track in self.online_targets:
             text = str(track.track_id)
             bbox = track.tlwh
-            is_curr_track = (idx == self.track_idx)
-            BasicMotEnv._visualize_box(img0, text, bbox, idx, is_curr_track)
+            is_curr_track = (track == curr_track)
+            BasicMotEnv._visualize_box(img0, text, bbox, track.track_id, is_curr_track)
 
         track_id = self.online_targets[self.track_idx].track_id
         self._display_frame(img0, track_id)

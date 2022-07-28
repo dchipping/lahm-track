@@ -18,7 +18,7 @@ class GreedyAgent:
     def compute_single_action(obs):
         return 1
 
-class ModifiedSTrack(BaseTrack):
+class AgentSTrack(BaseTrack):
     shared_kalman = KalmanFilter()
     def __init__(self, tlwh, score, temp_feat, agent=GreedyAgent()):
         self._tlwh = np.asarray(tlwh, dtype=np.float)
@@ -125,7 +125,7 @@ class ModifiedSTrack(BaseTrack):
             for i, st in enumerate(stracks):
                 if st.state != TrackState.Tracked:
                     multi_mean[i][7] = 0
-            multi_mean, multi_covariance = ModifiedSTrack.shared_kalman.multi_predict(multi_mean, multi_covariance)
+            multi_mean, multi_covariance = AgentSTrack.shared_kalman.multi_predict(multi_mean, multi_covariance)
             for i, (mean, cov) in enumerate(zip(multi_mean, multi_covariance)):
                 stracks[i].mean = mean
                 stracks[i].covariance = cov
@@ -194,7 +194,7 @@ class ModifiedSTrack(BaseTrack):
         return 'OT_{}_({}-{})'.format(self.track_id, self.start_frame, self.end_frame)
 
 
-class ModifiedJDETracker():
+class TrainAgentJDETracker():
     def __init__(self, opt, frame_rate=30, agent_path=None):
         self.opt = opt
         self.tracked_stracks = []  # type: list[STrack]
@@ -241,7 +241,7 @@ class ModifiedJDETracker():
 
         if len(dets) > 0:
             '''Detections'''
-            detections = [ModifiedSTrack(ModifiedSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f, 
+            detections = [AgentSTrack(AgentSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f, 
             agent=self.agent) for (tlbrs, f) in zip(dets[:, :5], id_feature)]
         else:
             detections = []
@@ -260,7 +260,7 @@ class ModifiedJDETracker():
         # Predict the current location with KF
         #for strack in strack_pool:
             #strack.predict()
-        ModifiedSTrack.multi_predict(strack_pool)
+        AgentSTrack.multi_predict(strack_pool)
         dists = matching.embedding_distance(strack_pool, detections)
         #dists = matching.iou_distance(strack_pool, detections)        
         dists = matching.fuse_motion(self.kalman_filter, dists, strack_pool, detections)

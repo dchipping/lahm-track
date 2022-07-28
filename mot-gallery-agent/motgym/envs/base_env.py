@@ -32,11 +32,8 @@ class BasicMotEnv(gym.Env):
         self.tracker_args = None
         self.tracker = None
 
-    def _reset_state(self):
+    def _reset_env(self):
         self.ep_reward = 0
-        self.frame_id = 1
-        self.online_targets = []
-        self.track_idx = 0
         self.fps = None
         self.results = []
 
@@ -195,13 +192,14 @@ class BasicMotEnv(gym.Env):
 
         txt_bk_color = (_COLORS[color_index % 80] *
                         255 * 0.7).astype(np.uint8).tolist()
-        cv2.rectangle(
-            img,
-            (x0, y0 + 1),
-            (x0 + txt_size[0] + 1, y0 + int(1.5*txt_size[1])),
-            txt_bk_color,
-            -1
-        )
-        cv2.putText(
-            img, text, (x0, y0 + txt_size[1]), font, 0.6, txt_color, thickness=1)
+        if text:
+            cv2.rectangle(
+                img,
+                (x0, y0 + 1),
+                (x0 + txt_size[0] + 1, y0 + int(1.5*txt_size[1])),
+                txt_bk_color,
+                -1
+            )
+            cv2.putText(
+                img, text, (x0, y0 + txt_size[1]), font, 0.6, txt_color, thickness=1)
         return img

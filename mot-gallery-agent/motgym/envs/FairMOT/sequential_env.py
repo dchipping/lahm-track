@@ -1,5 +1,3 @@
-import copy
-import random
 import os.path as osp
 from collections import defaultdict
 
@@ -7,7 +5,7 @@ import cv2
 import numpy as np
 from gym import spaces
 import FairMOT.src._init_paths
-from modified.fairmot_train import ModifiedJDETracker as Tracker
+from modified.fairmot_train import TrainAgentJDETracker as Tracker
 from opts import opts
 from tracker.basetrack import BaseTrack
 
@@ -15,6 +13,7 @@ from ..base_env import BasicMotEnv
 
 
 class SequentialFairmotEnv(BasicMotEnv):
+    _instance = 0
     def __init__(self, dataset, detections):
         super().__init__(dataset, detections)
         '''
@@ -33,6 +32,28 @@ class SequentialFairmotEnv(BasicMotEnv):
             np.array([0., -1., 0.]), np.array([1., 1., 100.]), shape=(3,), dtype=float)
 
         self.tracker_args = opts().init(['mot'])
+
+    @staticmethod
+    def next_instance():
+        SequentialFairmotEnv._instance += 1
+        return SequentialFairmotEnv._instance
+        
+    def assign_target(self):
+        print(f'Loading data from: {osp.join(self.data_dir, self.seq)}')
+        self._load_dataset(self.seq)
+        self._load_detections(self.seq)
+
+        gts = self.evaluator.gt_frame_dict.items()
+        tid_dict = defaultdict(list)
+        for frame_id, gt in gts:
+            for tlwh, tid, score in gt:
+                tid_dict[tid].append(frame_id)
+
+        viable_tids = [
+            tid for tid,
+            frame_ids in tid_dict.items() if len(frame_ids) > 30]
+        self.focus_tid = viable_tids[self.next_instance() % len(viable_tids)]
+        self.frame_ids = tid_dict[self.focus_tid]
 
     def _track_update(self, frame_id):
         dets = self.detections[str(frame_id)]
@@ -56,19 +77,17 @@ class SequentialFairmotEnv(BasicMotEnv):
         self.results.append((frame_id, online_tlwhs, online_ids))
 
     def _step_frame(self):
-        pass
-        # done = False
-        # if self.frame_id < self.seq_len:
-        #     self.frame_id += 1
-        #     self.online_targets = self._track_update(self.frame_id)
-        #     self._save_results(self.frame_id)
-        #     return done
-        # else:
-        #     done = True
-        #     results_file = osp.join(self.results_dir, f'{self.seq}.txt')
-        #     BasicMotEnv._write_results(self.results, results_file, 'mot')
-        #     BasicMotEnv._get_summary(self.evaluator, self.seq, results_file)
-        #     return done
+        done = False
+        if self.frame_id < self.frame_ids[-1]:
+            self.frame_id += 1
+            self.online_targets = self._track_update(self.frame_id)
+            self._save_results(self.frame_id)
+        else:
+            done = True
+            # results_file = osp.join(self.results_dir, f'{self.seq}.txt')
+            # BasicMotEnv._write_results(self.results, results_file, 'mot')
+            # BasicMotEnv._get_summary(self.evaluator, self.seq, results_file)
+        return done
 
     def _get_obs(self, track):
         return track.obs
@@ -78,7 +97,7 @@ class SequentialFairmotEnv(BasicMotEnv):
         track_info = {
             "track_id": track.track_id,
             "gallery_size": len(track.features),
-            "track_idx": self.track_idx
+            # "track_idx": self.track_idx
         }
         seq_info = {"seq_len": self.seq_len, "frame_rate": self.frame_rate}
         return {
@@ -89,31 +108,120 @@ class SequentialFairmotEnv(BasicMotEnv):
             "seq_info": seq_info
         }
 
+    def _add_results(self, results_dict, frame_id, online_targets):
+        results_dict.setdefault(frame_id, [])
+        for t in online_targets:
+            tlwh = t.tlwh
+            tid = t.track_id
+            ts = t.score
+            vertical = tlwh[2] / tlwh[3] > 1.6
+            min_area = self.tracker_args.min_box_area
+            if tlwh[2] * tlwh[3] > min_area and not vertical:
+                track_result = (tuple(tlwh), tid, ts)
+                results_dict[frame_id].append(track_result)
+
+    def _get_gt_tid(self):
+        results = {}
+        self._add_results(results, self.frame_id, self.online_targets)
+
+        events = self._get_events(results)
+        hypothesis = events[events['OId'] == self.focus_tid]['HId']
+        assert len(hypothesis.values) == 1 # Only one HId per frame
+
+        return hypothesis.values[0]
+
+    def _reset_state(self):
+        self.frame_id = self.frame_ids[0]
+        self.gt_tid = 0
+        self.acc_error = 0
+        self.tracker = Tracker(self.tracker_args, self.frame_rate)
+
     def reset(self):
-        print(f'Loading data from: {osp.join(self.data_dir, self.seq)}')
-        self._load_dataset(self.seq)
-        self._load_detections(self.seq)
+        self._reset_env()
         self._reset_state()
 
-        gts = self.evaluator.gt_frame_dict.items()
-        tid_dict = defaultdict(list)
-        for frame_id, gt in gts:
-            for tlwh, tid, score in gt:
-                tid_dict[tid].append(frame_id)
-        viable_tids = [
-            tid for tid,
-            frame_ids in tid_dict.items() if len(frame_ids) > 30]
-        focus_tid = viable_tids[random.randint(0, len(viable_tids))]
+        self.online_targets = self._track_update(self.frame_id)
+        # Only release loop once the first track(s) confirmed
+        while not self.online_targets or not self.gt_tid > 0:
+            done = self._step_frame()
+            self.gt_tid = self._get_gt_tid()
+            if done: raise Exception('Sequence too short')
 
-        return _
+        self.track = next(filter(lambda x: x.track_id == self.gt_tid,
+                     self.online_targets))
 
+        obs = self._get_obs(self.track)
+        return obs
+
+    @BasicMotEnv.calc_fps
     def step(self, action):
-        return _, _, _, _
+        track = self.track
+        track.update_gallery(action, track.curr_feat)
+
+        reward = 0
+        done = self._step_frame()
+        self.gt_tid = self._get_gt_tid()
+        if track.track_id == self.gt_tid:
+            reward += 1
+        else:
+            reward -= 10
+            self.acc_error += 1
+        self.ep_reward += reward
+
+        obs = self._get_info(self.track)
+        info = self._get_info(self.track)
+        return obs, reward, done, info
+
+    def render(self, mode="human"):
+        img0 = cv2.imread(self.images[self.frame_id - 1])
+        self._init_rendering(img0.shape)
+
+        # Add bounding box for each track in frame
+        for track in self.online_targets:
+            tid = track.track_id
+            text = str(tid)
+            bbox = track.tlwh
+            is_correct = (self.gt_tid == tid)
+            is_curr_track = (self.track.track_id == tid) 
+            if is_correct or is_curr_track:
+                BasicMotEnv._visualize_box(img0, text, bbox, tid, True)
+            else:
+                BasicMotEnv._visualize_box(img0, '', bbox, tid, False)
+
+        self._display_frame(img0, self.gt_tid)
 
 
-class Mot17SequentialEnv(SequentialFairmotEnv):
+class Mot17SequentialEnvSeq02(SequentialFairmotEnv):
     def __init__(self):
         dataset = 'MOT17/train_half'
         detections = 'FairMOT/MOT17/train_half'
         super().__init__(dataset, detections)
-        self.seq = self.seqs[0]
+        self.seq = 'MOT17-02'
+        self.assign_target()
+
+
+class Mot17SequentialEnvSeq04(SequentialFairmotEnv):
+    def __init__(self):
+        dataset = 'MOT17/train_half'
+        detections = 'FairMOT/MOT17/train_half'
+        super().__init__(dataset, detections)
+        self.seq = 'MOT17-04'
+        self.assign_target()
+
+
+class Mot17SequentialEnvSeq05(SequentialFairmotEnv):
+    def __init__(self):
+        dataset = 'MOT17/train_half'
+        detections = 'FairMOT/MOT17/train_half'
+        super().__init__(dataset, detections)
+        self.seq = 'MOT17-05'
+        self.assign_target()
+
+
+class Mot17SequentialEnvSeq09(SequentialFairmotEnv):
+    def __init__(self):
+        dataset = 'MOT17/train_half'
+        detections = 'FairMOT/MOT17/train_half'
+        super().__init__(dataset, detections)
+        self.seq = 'MOT17-09'
+        self.assign_target()

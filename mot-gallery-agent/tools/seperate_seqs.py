@@ -1,5 +1,6 @@
 import os
 import os.path as osp
+from math import ceil
 import shutil
 
 curr_dir = osp.dirname(__file__)
@@ -9,7 +10,7 @@ train_half_dir = osp.join(curr_dir, 'train_half')
 val_half_dir = osp.join(curr_dir, 'val_half')
 
 seqs = sorted(os.listdir(train_dir))
-mid = len(seqs) // 2
+mid = ceil(len(seqs), 2)
 
 os.makedirs(osp.join(train_half_dir), exist_ok=True)
 for seq in seqs[:mid]:
