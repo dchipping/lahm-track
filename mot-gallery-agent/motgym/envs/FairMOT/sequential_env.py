@@ -2,6 +2,7 @@ import os.path as osp
 from collections import defaultdict
 
 import cv2
+import random
 import numpy as np
 from gym import spaces
 import FairMOT.src._init_paths
@@ -51,9 +52,12 @@ class SequentialFairmotEnv(BasicMotEnv):
 
         viable_tids = [
             tid for tid,
-            frame_ids in tid_dict.items() if len(frame_ids) > 30]
-        self.focus_tid = viable_tids[self.next_instance() % len(viable_tids)]
+            frame_ids in tid_dict.items() if len(frame_ids) > self.frame_rate * 2]
+        # self.focus_tid = viable_tids[self.next_instance() % len(viable_tids)]
+        self.focus_tid = viable_tids[random.randint(0, len(viable_tids)-1)]
         self.frame_ids = tid_dict[self.focus_tid]
+        print(f'Assigned ground truth TrackID: {self.focus_tid}')
+        print(f'Evaluating frame {self.frame_ids[0]}-{self.frame_ids[-1]} (Len {self.frame_ids[-1]-self.frame_ids[0]})')
 
     def _track_update(self, frame_id):
         dets = self.detections[str(frame_id)]
@@ -84,9 +88,6 @@ class SequentialFairmotEnv(BasicMotEnv):
             self._save_results(self.frame_id)
         else:
             done = True
-            # results_file = osp.join(self.results_dir, f'{self.seq}.txt')
-            # BasicMotEnv._write_results(self.results, results_file, 'mot')
-            # BasicMotEnv._get_summary(self.evaluator, self.seq, results_file)
         return done
 
     def _get_obs(self, track):
@@ -155,20 +156,23 @@ class SequentialFairmotEnv(BasicMotEnv):
 
     @BasicMotEnv.calc_fps
     def step(self, action):
-        track = self.track
-        track.update_gallery(action, track.curr_feat)
+        for track in self.online_targets:
+            if self.track != track:
+                action = 1
+            track.update_gallery(action, track.curr_feat)
 
         reward = 0
         done = self._step_frame()
         self.gt_tid = self._get_gt_tid()
-        if track.track_id == self.gt_tid:
+        if self.track.track_id == self.gt_tid:
             reward += 1
+            self.acc_error = 1
         else:
-            reward -= 10
+            reward -= 2 * self.acc_error
             self.acc_error += 1
         self.ep_reward += reward
 
-        obs = self._get_info(self.track)
+        obs = self._get_obs(self.track)
         info = self._get_info(self.track)
         return obs, reward, done, info
 
@@ -182,11 +186,15 @@ class SequentialFairmotEnv(BasicMotEnv):
             text = str(tid)
             bbox = track.tlwh
             is_correct = (self.gt_tid == tid)
-            is_curr_track = (self.track.track_id == tid) 
-            if is_correct or is_curr_track:
-                BasicMotEnv._visualize_box(img0, text, bbox, tid, True)
+            is_curr_track = (self.track.track_id == tid)
+            if is_curr_track and is_correct:
+                BasicMotEnv._visualize_box(img0, text, bbox, 12, True)
+            elif is_correct:
+                BasicMotEnv._visualize_box(img0, text, bbox, 4, True)
+            elif is_curr_track:
+                BasicMotEnv._visualize_box(img0, text, bbox, 13, True)
             else:
-                BasicMotEnv._visualize_box(img0, '', bbox, tid, False)
+                BasicMotEnv._visualize_box(img0, '', bbox, 1, False)
 
         self._display_frame(img0, self.gt_tid)
 

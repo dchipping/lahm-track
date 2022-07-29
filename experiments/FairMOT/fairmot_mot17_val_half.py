@@ -12,8 +12,8 @@ import motmetrics as mm
 import numpy as np
 import torch
 import cv2
-import motgym
-import FairMOT.src._init_paths
+
+import motgym.trackers.FairMOT.src._init_paths
 import datasets.dataset.jde as datasets
 from tracking_utils import visualization as vis
 from tracker.multitracker import JDETracker
@@ -22,6 +22,7 @@ from tracking_utils.evaluation import Evaluator
 from tracking_utils.log import logger
 from tracking_utils.timer import Timer
 from tracking_utils.utils import mkdir_if_missing
+from tracker.basetrack import BaseTrack
 
 
 def write_results(filename, results, data_type):
@@ -48,6 +49,7 @@ def write_results(filename, results, data_type):
 
 def eval_seq(opt, dataloader, data_type, result_filename, show_image=True, frame_rate=30, use_cuda=True):
     tracker = JDETracker(opt, frame_rate=frame_rate)
+    BaseTrack._count = 0
     timer = Timer()
     results = []
     frame_id = 0
@@ -137,9 +139,9 @@ def main(opt, data_root='/data/MOT16/train', seqs=('MOT16-05',), exp_name='demo'
 if __name__ == '__main__':
     exp_name = ''
 
+    conf_thres = 0.4
     model_path = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/trackers/FairMOT/models/fairmot_dla34.pth'
     data_dir = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/datasets/MOT17/val_half'
-    conf_thres = 0.4
 
     opt = opts().init(['mot', f'--load_model={model_path}', f'--data_dir={data_dir}',
                         f'--conf_thres={conf_thres}'])

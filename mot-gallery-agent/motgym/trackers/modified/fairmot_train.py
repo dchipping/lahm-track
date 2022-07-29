@@ -1,9 +1,8 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
-
+import random
 from collections import deque
-from ray.rllib.agents import ppo, dqn
 from scipy import spatial
 
 import FairMOT.src._init_paths
@@ -41,7 +40,7 @@ class AgentSTrack(BaseTrack):
  
     def gallery_similarity(self, feat):
         feat /= np.linalg.norm(feat)
-        max_cosine_simlarity = -1
+        max_cosine_simlarity = -1.
         if self.features:
             dists = spatial.distance.cdist(np.array([feat]), np.asarray(self.features), 'cosine')
             max_cosine_simlarity = np.max(np.ones(dists.shape) - dists)
@@ -53,7 +52,7 @@ class AgentSTrack(BaseTrack):
 
     def init_observation(self, temp_feat):
         similarity = self.gallery_similarity(temp_feat)
-        return np.array([self.score, similarity, 0], dtype=float)
+        return np.array([self.score, similarity, len(self.features)], dtype=float)
 
     def update_gallery(self, action, feat):
         '''Translate action to change in gallery'''
@@ -195,7 +194,7 @@ class AgentSTrack(BaseTrack):
 
 
 class TrainAgentJDETracker():
-    def __init__(self, opt, frame_rate=30, agent_path=None):
+    def __init__(self, opt, frame_rate=30):
         self.opt = opt
         self.tracked_stracks = []  # type: list[STrack]
         self.lost_stracks = []  # type: list[STrack]
@@ -209,7 +208,6 @@ class TrainAgentJDETracker():
         self.std = np.array(opt.std, dtype=np.float32).reshape(1, 1, 3)
         
         self.kalman_filter = KalmanFilter()
-        self.agent = self.build_agent(agent_path)
 
     def reset(self):
         BaseTrack._count = 0
@@ -217,19 +215,6 @@ class TrainAgentJDETracker():
         self.lost_stracks = []  # type: list[STrack]
         self.removed_stracks = []  # type: list[STrack]
         self.kalman_filter = KalmanFilter()
-
-    def build_agent(self, agent_path):
-        if not agent_path:
-            print("Starting tracker in RL train mode, this will freeze the gallery")
-            return None
-        # config = ppo.DEFAULT_CONFIG.copy()
-        config = dqn.DEFAULT_CONFIG.copy()
-        config["num_gpus"] = 1#self.opt.gpus[0]
-        config["framework"] = "torch"
-        # trainer = ppo.PPOTrainer(config=config, env="motgym:Mot17Env-v0")
-        trainer = dqn.DQNTrainer(config=config, env="motgym:Mot17ParallelEnv-v0")
-        trainer.restore(agent_path)
-        return trainer
 
     def update(self, dets, id_feature, frame_id):
         activated_starcks = []
@@ -241,8 +226,8 @@ class TrainAgentJDETracker():
 
         if len(dets) > 0:
             '''Detections'''
-            detections = [AgentSTrack(AgentSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f, 
-            agent=self.agent) for (tlbrs, f) in zip(dets[:, :5], id_feature)]
+            detections = [AgentSTrack(AgentSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f, agent=None)
+             for (tlbrs, f) in zip(dets[:, :5], id_feature)]
         else:
             detections = []
             

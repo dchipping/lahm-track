@@ -1,4 +1,5 @@
 from abc import abstractmethod
+import time
 import gym
 import random
 import cv2
@@ -8,7 +9,7 @@ import time
 import numpy as np
 import datetime as dt
 import motmetrics as mm
-from ._bbox_colors import _COLORS
+from .utils.bbox_colors import _COLORS
 from .utils.evaluation import Evaluator
 from .utils.timer import Timer
 from .utils.io import unzip_objs
@@ -19,7 +20,7 @@ class BasicMotEnv(gym.Env):
         self.action_space = None
         self.observation_space = None
         
-        random.seed(3)
+        random.seed(time.time_ns())
         self.first_render = True
         self.timer = Timer()
 
@@ -109,10 +110,10 @@ class BasicMotEnv(gym.Env):
         self.first_render = True
 
     @staticmethod
-    def calc_fps(func):
+    def calc_fps(step_func):
         def inner(self, action):
             self.timer.tic()
-            output = func(self, action)
+            output = step_func(self, action)
             self.timer.toc()
             self.fps = round(1./self.timer.average_time, 2)
             return output

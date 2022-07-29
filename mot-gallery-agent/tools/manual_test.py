@@ -1,4 +1,5 @@
 import gym
+import time
 
 # env = gym.make("motgym:Mot17ParallelEnv-v0")
 env = gym.make("motgym:Mot17SequentialEnvSeq05-v0")
@@ -13,4 +14,7 @@ while not done:
     # if info['curr_frame'] % 10 == 0 and info['curr_track']['track_idx'] == 0:
         print(f"Frame: {info['curr_frame']}, TrackIDs: {info['tracks_ids']}")
     env.render()
+    time.sleep(0.1)
+    
 env.close()
+print(info["ep_reward"])
