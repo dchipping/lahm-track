@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import datetime as dt
 import logging
 import os
@@ -7,15 +11,18 @@ from pathlib import Path
 import motmetrics as mm
 import numpy as np
 import torch
-import motgym
-import FairMOT.src._init_paths
+import cv2
+
+import motgym.trackers.FairMOT.src._init_paths
 import datasets.dataset.jde as datasets
+from tracking_utils import visualization as vis
 from tracker.multitracker import JDETracker
 from opts import opts
 from tracking_utils.evaluation import Evaluator
 from tracking_utils.log import logger
 from tracking_utils.timer import Timer
 from tracking_utils.utils import mkdir_if_missing
+from tracker.basetrack import BaseTrack
 
 
 def write_results(filename, results, data_type):
@@ -40,17 +47,14 @@ def write_results(filename, results, data_type):
     logger.info('save results to {}'.format(filename))
 
 
-def eval_seq(opt, dataloader, data_type, result_filename, save_dir=None, show_image=True, frame_rate=30, use_cuda=True):
-    if save_dir:
-        mkdir_if_missing(save_dir)
+def eval_seq(opt, dataloader, data_type, result_filename, show_image=True, frame_rate=30, use_cuda=True):
     tracker = JDETracker(opt, frame_rate=frame_rate)
+    BaseTrack._count = 0
     timer = Timer()
     results = []
     frame_id = 0
-    #for path, img, img0 in dataloader:
+    
     for i, (path, img, img0) in enumerate(dataloader):
-        #if i % 8 != 0:
-            #continue
         if frame_id % 20 == 0:
             logger.info('Processing frame {} ({:.2f} fps)'.format(frame_id, 1. / max(1e-5, timer.average_time)))
 
@@ -73,6 +77,11 @@ def eval_seq(opt, dataloader, data_type, result_filename, save_dir=None, show_im
         timer.toc()
         # save results
         results.append((frame_id + 1, online_tlwhs, online_ids))
+        if show_image:
+            online_im = vis.plot_tracking(img0, online_tlwhs, online_ids, frame_id=frame_id,
+                                          fps=1. / timer.average_time)
+            cv2.imshow('online_im', online_im)
+            cv2.waitKey(1)
         frame_id += 1
 
     # save results
@@ -80,8 +89,8 @@ def eval_seq(opt, dataloader, data_type, result_filename, save_dir=None, show_im
     return frame_id, timer.average_time, timer.calls
 
 
-def main(opt, data_root='/data/MOT16/train', det_root=None, seqs=('MOT16-05',), exp_name='demo',
-         save_images=False, save_videos=False, show_image=True):
+def main(opt, data_root='/data/MOT16/train', seqs=('MOT16-05',), exp_name='demo',
+         show_image=True):
     logger.setLevel(logging.INFO)
     result_root = os.path.join(os.getcwd(), 'results', Path(__file__).stem, exp_name)
     mkdir_if_missing(result_root)
@@ -92,14 +101,13 @@ def main(opt, data_root='/data/MOT16/train', det_root=None, seqs=('MOT16-05',), 
     n_frame = 0
     timer_avgs, timer_calls = [], []
     for seq in seqs:
-        output_dir = os.path.join(data_root, '..', 'outputs', exp_name, seq) if save_images or save_videos else None
         logger.info('start seq: {}'.format(seq))
         dataloader = datasets.LoadImages(osp.join(data_root, seq, 'img1'), opt.img_size)
         result_filename = os.path.join(result_root, '{}.txt'.format(seq))
         meta_info = open(os.path.join(data_root, seq, 'seqinfo.ini')).read()
         frame_rate = int(meta_info[meta_info.find('frameRate') + 10:meta_info.find('\nseqLength')])
-        nf, ta, tc = eval_seq(opt, dataloader, data_type, result_filename,
-                              save_dir=output_dir, show_image=show_image, frame_rate=frame_rate)
+        nf, ta, tc = eval_seq(opt, dataloader, data_type, result_filename, show_image=show_image,
+                             frame_rate=frame_rate)
         n_frame += nf
         timer_avgs.append(ta)
         timer_calls.append(tc)
@@ -129,19 +137,17 @@ def main(opt, data_root='/data/MOT16/train', det_root=None, seqs=('MOT16-05',), 
 
 
 if __name__ == '__main__':
+    exp_name = ''
+
+    conf_thres = 0.4
     model_path = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/trackers/FairMOT/models/fairmot_dla34.pth'
     data_dir = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/datasets/MOT17/val_half'
-    conf_thres = 0.4
 
     opt = opts().init(['mot', f'--load_model={model_path}', f'--data_dir={data_dir}',
                         f'--conf_thres={conf_thres}'])
 
-    exp_name = f'{dt.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")}'
-
     main(opt,
          data_root=data_dir,
          seqs=sorted(os.listdir(data_dir)),
-         exp_name=exp_name,
-         show_image=False,
-         save_images=False,
-         save_videos=False)
+         exp_name=exp_name if exp_name else f'{dt.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")}',
+         show_image=True)

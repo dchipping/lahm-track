@@ -10,7 +10,7 @@ import torch
 import cv2
 import motgym.trackers.FairMOT.src._init_paths
 import datasets.dataset.jde as datasets
-from modified.fairmot_agent import AgentJDETracker
+from modified.fairmot_agent import AgentJDETracker, RandomAgent
 from tracking_utils import visualization as vis
 from opts import opts
 from tracking_utils.evaluation import Evaluator
@@ -43,6 +43,7 @@ def write_results(filename, results, data_type):
 
 def eval_seq(opt, dataloader, data_type, result_filename, show_image=True, frame_rate=30, use_cuda=True, agent_path=None):
     tracker = AgentJDETracker(opt, frame_rate=frame_rate, agent_path=agent_path)
+    tracker.agent = RandomAgent()
     timer = Timer()
     results = []
     frame_id = 0
@@ -144,5 +145,4 @@ if __name__ == '__main__':
          data_root=data_dir,
          seqs=sorted(os.listdir(data_dir)),
          exp_name=exp_name if exp_name else f'{dt.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")}',
-         show_image=True,
-         agent_path=agent_path)
+         show_image=False)

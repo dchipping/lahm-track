@@ -6,10 +6,10 @@ from ray.tune.logger import pretty_print
 from motgym.envs.FairMOT.parallel_env import Mot17ParallelEnv
 # Check env is ok
 # env = gym.make("motgym:Mot17ParallelEnv-v0")
-class CustomEnv(Mot17ParallelEnv):
-    def __init__(self, _):
-        super().__init__()
-        self.first_render = False
+# class CustomEnv(Mot17ParallelEnv):
+#     def __init__(self, _):
+#         super().__init__()
+#         self.first_render = False
 # rllib.utils.check_env(CustomEnv)
 
 # Configure trainer

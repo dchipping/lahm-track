@@ -1,8 +1,8 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
+from ray.rllib.agents import ppo, dqn
 
-# import FairMOT.src._init_paths
 from .fairmot_train import *
 from models import *
 from models.decode import mot_decode
@@ -10,11 +10,16 @@ from models.model import create_model, load_model
 from models.utils import _tranpose_and_gather_feat
 from tracking_utils.kalman_filter import KalmanFilter
 from tracking_utils.log import logger
-from tracking_utils.utils import *
 from utils.post_process import ctdet_post_process
 
 
-class AgentJDETracker(ModifiedJDETracker):
+class RandomAgent:
+    @staticmethod
+    def compute_single_action(obs):
+        return random.randint(0,1)
+
+
+class AgentJDETracker(TrainAgentJDETracker):
     def __init__(self, opt, frame_rate=30, agent_path=None):
         self.opt = opt
         if opt.gpus[0] >= 0:
@@ -41,6 +46,19 @@ class AgentJDETracker(ModifiedJDETracker):
 
         self.kalman_filter = KalmanFilter()
         self.agent = self.build_agent(agent_path)
+        BaseTrack._count = 0 ## THIS IS A HACK NEED TO REMOVE, CAN WE EXPORT PYTORCH
+        ## WEIGHTS AND USE INDEPENDENTLY OF RESETING ENV AND CAUSING THIS COUNT TO GO UP?
+
+    def build_agent(self, agent_path):
+        if agent_path:
+            # config = ppo.DEFAULT_CONFIG.copy()
+            config = dqn.DEFAULT_CONFIG.copy()
+            config["framework"] = "torch"
+
+            # trainer = ppo.PPOTrainer(config=config, env="motgym:Mot17Env-v0")
+            trainer = dqn.DQNTrainer(config=config, env="motgym:Mot17ParallelEnv-v0")
+            trainer.restore(agent_path)
+            return trainer
 
     def post_process(self, dets, meta):
         dets = dets.detach().cpu().numpy()
@@ -108,7 +126,7 @@ class AgentJDETracker(ModifiedJDETracker):
 
         if len(dets) > 0:
             '''Detections'''
-            detections = [ModifiedSTrack(ModifiedSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f, 
+            detections = [AgentSTrack(AgentSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f, 
             agent=self.agent) for (tlbrs, f) in zip(dets[:, :5], id_feature)]
         else:
             detections = []
@@ -127,7 +145,7 @@ class AgentJDETracker(ModifiedJDETracker):
         # Predict the current location with KF
         #for strack in strack_pool:
             #strack.predict()
-        ModifiedSTrack.multi_predict(strack_pool)
+        AgentSTrack.multi_predict(strack_pool)
         dists = matching.embedding_distance(strack_pool, detections)
         #dists = matching.iou_distance(strack_pool, detections)        
         dists = matching.fuse_motion(self.kalman_filter, dists, strack_pool, detections)
