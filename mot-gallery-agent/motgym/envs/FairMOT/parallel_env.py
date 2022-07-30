@@ -167,11 +167,11 @@ class ParallelFairmotEnv(BasicMotEnv):
         '''
         reward = 0
         if 'SWITCH' in mm_types:
-            reward += -1000
+            reward += -2
         else:
             reward += 1
         if len(track.features) > 30:
-            reward += -1000
+            reward += -1
         return reward
 
     @BasicMotEnv.calc_fps

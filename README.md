@@ -8,5 +8,4 @@ TODO:
 - Remove track from gallery
 - Experiment Scripts
 
-- Random init
-- 
+- Random init of gallery
