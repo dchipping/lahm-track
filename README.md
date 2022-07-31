@@ -4,8 +4,7 @@
 - Includes mot-gallery-agent
 
 TODO:
-- Overlap Obs Space
-- Remove track from gallery
 - Experiment Scripts
-
+- Baseline comparison with new gallery lookup
 - Random init of gallery
+- average cdist of tracks

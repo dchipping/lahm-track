@@ -16,7 +16,7 @@ from .utils.io import unzip_objs
 
 
 class BasicMotEnv(gym.Env):
-    def __init__(self, dataset, detections, seed=1):
+    def __init__(self, dataset, detections):
         self.action_space = None
         self.observation_space = None
         

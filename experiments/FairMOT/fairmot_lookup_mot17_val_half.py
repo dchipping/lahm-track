@@ -1,30 +1,22 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import datetime as dt
 import logging
 import os
 import os.path as osp
 from pathlib import Path
-from motgym.trackers.modified.fairmot_train import GreedyAgent
-from motgym.trackers.modified.fairmot_agent import AgentJDETracker
 
 import motmetrics as mm
 import numpy as np
 import torch
 import cv2
-
 import motgym.trackers.FairMOT.src._init_paths
 import datasets.dataset.jde as datasets
+from modified.fairmot_lookup_agent import AgentJDETracker, GreedyAgent
 from tracking_utils import visualization as vis
-from tracker.multitracker import JDETracker
 from opts import opts
 from tracking_utils.evaluation import Evaluator
 from tracking_utils.log import logger
 from tracking_utils.timer import Timer
 from tracking_utils.utils import mkdir_if_missing
-from tracker.basetrack import BaseTrack
 
 
 def write_results(filename, results, data_type):
@@ -49,14 +41,13 @@ def write_results(filename, results, data_type):
     logger.info('save results to {}'.format(filename))
 
 
-def eval_seq(opt, dataloader, data_type, result_filename, show_image=True, frame_rate=30, use_cuda=True):
+def eval_seq(opt, dataloader, data_type, result_filename, show_image=True, frame_rate=30, use_cuda=True, agent_path=None):
     tracker = AgentJDETracker(opt, frame_rate=frame_rate)
     tracker.agent = GreedyAgent()
-    BaseTrack._count = 0
     timer = Timer()
     results = []
     frame_id = 0
-    
+
     for i, (path, img, img0) in enumerate(dataloader):
         if frame_id % 20 == 0:
             logger.info('Processing frame {} ({:.2f} fps)'.format(frame_id, 1. / max(1e-5, timer.average_time)))
@@ -67,8 +58,6 @@ def eval_seq(opt, dataloader, data_type, result_filename, show_image=True, frame
             blob = torch.from_numpy(img).cuda().unsqueeze(0)
         else:
             blob = torch.from_numpy(img).unsqueeze(0)
-        if i == 210:
-            print(i)
         online_targets = tracker.update(blob, img0)
         online_tlwhs = []
         online_ids = []
@@ -95,7 +84,7 @@ def eval_seq(opt, dataloader, data_type, result_filename, show_image=True, frame
 
 
 def main(opt, data_root='/data/MOT16/train', seqs=('MOT16-05',), exp_name='demo',
-         show_image=True):
+             show_image=True, agent_path=None):
     logger.setLevel(logging.INFO)
     result_root = os.path.join(os.getcwd(), 'results', Path(__file__).stem, exp_name)
     mkdir_if_missing(result_root)
@@ -111,8 +100,8 @@ def main(opt, data_root='/data/MOT16/train', seqs=('MOT16-05',), exp_name='demo'
         result_filename = os.path.join(result_root, '{}.txt'.format(seq))
         meta_info = open(os.path.join(data_root, seq, 'seqinfo.ini')).read()
         frame_rate = int(meta_info[meta_info.find('frameRate') + 10:meta_info.find('\nseqLength')])
-        nf, ta, tc = eval_seq(opt, dataloader, data_type, result_filename, show_image=show_image,
-                             frame_rate=frame_rate)
+        nf, ta, tc = eval_seq(opt, dataloader, data_type, result_filename,
+                               show_image=show_image, frame_rate=frame_rate, agent_path=agent_path)
         n_frame += nf
         timer_avgs.append(ta)
         timer_calls.append(tc)
@@ -143,10 +132,11 @@ def main(opt, data_root='/data/MOT16/train', seqs=('MOT16-05',), exp_name='demo'
 
 if __name__ == '__main__':
     exp_name = ''
-
-    conf_thres = 0.4
+    agent_path = '/home/dchipping/ray_results/default/DQN_motgym:Mot17Env-v0_e3037_00000_0_2022-07-26_05-53-27/checkpoint_000035/checkpoint-35'
+    
     model_path = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/trackers/FairMOT/models/fairmot_dla34.pth'
     data_dir = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/datasets/MOT17/val_half'
+    conf_thres = 0.4
 
     opt = opts().init(['mot', f'--load_model={model_path}', f'--data_dir={data_dir}',
                         f'--conf_thres={conf_thres}'])
@@ -155,4 +145,5 @@ if __name__ == '__main__':
          data_root=data_dir,
          seqs=sorted(os.listdir(data_dir)),
          exp_name=exp_name if exp_name else f'{dt.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")}',
-         show_image=False)
+         show_image=False,
+         agent_path=agent_path)

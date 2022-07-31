@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from ray.rllib.agents import ppo, dqn
 
-from .fairmot_train import *
+from .fairmot_lookup_train import *
 from models import *
 from models.decode import mot_decode
 from models.model import create_model, load_model
@@ -17,6 +17,12 @@ class RandomAgent:
     @staticmethod
     def compute_single_action(obs):
         return random.randint(0,1)
+
+
+class GreedyAgent:
+    @staticmethod
+    def compute_single_action(obs):
+        return 1
 
 
 class AgentJDETracker(TrainAgentJDETracker):
@@ -46,8 +52,8 @@ class AgentJDETracker(TrainAgentJDETracker):
 
         self.kalman_filter = KalmanFilter()
         self.agent = self.build_agent(agent_path)
-        BaseTrack._count = 0 ## THIS IS A HACK NEED TO REMOVE, CAN WE EXPORT PYTORCH
-        ## WEIGHTS AND USE INDEPENDENTLY OF RESETING ENV AND CAUSING THIS COUNT TO GO UP?
+        BaseTrack._count = 0 ## THIS IS A HACK, CAN WE EXPORT PYTORCH WEIGHTS
+        ## AND USE INDEPENDENTLY OF RESETTING ENV AND CAUSING COUNT TO GO UP?
 
     def build_agent(self, agent_path):
         if not agent_path:
@@ -130,7 +136,7 @@ class AgentJDETracker(TrainAgentJDETracker):
         if len(dets) > 0:
             '''Detections'''
             detections = [AgentSTrack(AgentSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f, 
-            agent=self.agent) for (tlbrs, f) in zip(dets[:, :5], id_feature)]
+            0, agent=self.agent) for (tlbrs, f) in zip(dets[:, :5], id_feature)]
         else:
             detections = []
             
@@ -149,8 +155,11 @@ class AgentJDETracker(TrainAgentJDETracker):
         #for strack in strack_pool:
             #strack.predict()
         AgentSTrack.multi_predict(strack_pool)
-        dists = matching.embedding_distance(strack_pool, detections)
-        #dists = matching.iou_distance(strack_pool, detections)        
+        if self.lookup_gallery:
+            dists = custom_embedding_distance(strack_pool, detections)
+        else:
+            dists = matching.embedding_distance(strack_pool, detections)
+        # dists = matching.iou_distance(strack_pool, detections)        
         dists = matching.fuse_motion(self.kalman_filter, dists, strack_pool, detections)
         matches, u_track, u_detection = matching.linear_assignment(dists, thresh=0.4)
 
@@ -230,3 +239,31 @@ class AgentJDETracker(TrainAgentJDETracker):
         logger.debug('Removed: {}'.format([track.track_id for track in removed_stracks]))
 
         return output_stracks
+
+
+def custom_embedding_distance(tracks, detections, metric='cosine'):
+    """
+    :param tracks: list[STrack]
+    :param detections: list[BaseTrack]
+    :param metric:
+    :return: cost_matrix np.ndarray
+    """
+
+    cost_matrix = np.zeros((len(tracks), len(detections)), dtype=np.float)
+    if cost_matrix.size == 0:
+        return cost_matrix
+    det_features = np.asarray(
+        [track.curr_feat for track in detections], dtype=np.float)
+
+    # Pick min from gallery as smooth_feat (in place of moving average)
+    for i, track in enumerate(tracks):
+        if track.features:
+            gallery_cost_matrix = cdist(np.asarray(track.features), det_features, metric)
+            gallery_idx, _ = np.unravel_index(np.argmin(gallery_cost_matrix), gallery_cost_matrix.shape)
+            track.smooth_feat = track.features[gallery_idx]
+
+    track_features = np.asarray(
+        [track.smooth_feat for track in tracks], dtype=np.float)
+    cost_matrix = np.maximum(0.0, cdist(
+        track_features, det_features, metric))  # Nomalized features
+    return cost_matrix

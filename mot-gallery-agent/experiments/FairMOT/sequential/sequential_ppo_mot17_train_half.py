@@ -1,22 +1,26 @@
 import gym
+import os
 from ray import rllib, tune
 from ray.tune.registry import register_env
 from ray.rllib.agents import ppo, dqn
 from ray.tune.logger import pretty_print
 from ray.rllib.env.multi_agent_env import make_multi_agent
-
+from pathlib import Path
+import datetime as dt
 
 # Check env is ok
-env = gym.make("motgym:Mot17SequentialEnvSeq05-v0")
+# env = gym.make("motgym:Mot17SequentialEnvSeq05-v0")
 # rllib.utils.check_env(env)
-
-results = tune.run("DQN",
+path = Path(__file__)
+results = tune.run("PPO",
                 config={
                     "framework": "torch",
-                    # "num_workers": 1,
-                    # "num_gpus": 1,
+                    "num_gpus": 1,
+                    "num_workers": 6,
                     "env":"motgym:Mot17SequentialEnvSeq05-v0",
                 },
+                name=f'{dt.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")}',
+                local_dir=f'{os.path.join(path.parents[1], "results", path.stem)}',
                 stop={
                     "training_iteration": 10
                 },
