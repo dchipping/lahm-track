@@ -15,8 +15,9 @@ def run_sequential_env(greedy=False, target_idx=None, analyse=False):
     while not done:
         action = 1 if greedy else env.action_space.sample()
         obs, reward, done, info = env.step(action)
-        if info['curr_frame'] % 10 == 0:
-            print(f"Frame: {info['curr_frame']}, TrackIDs: {info['curr_track']}")
+        print(reward)
+        # if info['curr_frame'] % 10 == 0:
+            # print(f"Frame: {info['curr_frame']}, TrackIDs: {info['curr_track']}")
         # Artificially slow down the rendering for anlaysis
         time.sleep(0.1)
         env.render()
@@ -26,6 +27,6 @@ def run_sequential_env(greedy=False, target_idx=None, analyse=False):
 
 
 if __name__ == "__main__":
-    run_sequential_env(target_idx=18, greedy=True)
+    # run_sequential_env(target_idx=18, greedy=True)
     # run_sequential_env(target_idx=40)
-    # run_sequential_env(target_idx=20)
+    run_sequential_env(target_idx=20)

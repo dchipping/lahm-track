@@ -16,11 +16,11 @@ results = tune.run("PPO",
                 config={
                     "framework": "torch",
                     "num_gpus": 1,
-                    "num_workers": 6,
+                    "num_workers": 4,
                     "env":"motgym:Mot17SequentialEnvSeq05-v0",
                 },
                 name=f'{dt.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")}',
-                local_dir=f'{os.path.join(path.parents[1], "results", path.stem)}',
+                local_dir=f'{os.path.join(path.parents[2], "results", path.stem)}',
                 stop={
                     "training_iteration": 10
                 },

@@ -1,7 +1,9 @@
+import random
+
 import numpy as np
 import torch
 import torch.nn.functional as F
-from ray.rllib.agents import ppo, dqn
+from ray.rllib.agents import dqn, impala, ppo
 
 from .fairmot_train import *
 from models import *
@@ -19,8 +21,14 @@ class RandomAgent:
         return random.randint(0,1)
 
 
+class GreedyAgent:
+    @staticmethod
+    def compute_single_action(obs):
+        return 1
+
+
 class AgentJDETracker(TrainAgentJDETracker):
-    def __init__(self, opt, frame_rate=30, agent_path=None):
+    def __init__(self, opt, frame_rate=30, lookup_gallery=False, agent_path=None):
         self.opt = opt
         if opt.gpus[0] >= 0:
             opt.device = torch.device('cuda')
@@ -45,21 +53,31 @@ class AgentJDETracker(TrainAgentJDETracker):
         self.std = np.array(opt.std, dtype=np.float32).reshape(1, 1, 3)
 
         self.kalman_filter = KalmanFilter()
+        self.lookup_gallery = lookup_gallery
+
         self.agent = self.build_agent(agent_path)
-        BaseTrack._count = 0 ## THIS IS A HACK NEED TO REMOVE, CAN WE EXPORT PYTORCH
-        ## WEIGHTS AND USE INDEPENDENTLY OF RESETING ENV AND CAUSING THIS COUNT TO GO UP?
+        BaseTrack._count = 0 ## THIS IS A HACK, CAN WE EXPORT PYTORCH WEIGHTS
+        ## AND USE INDEPENDENTLY OF RESETTING ENV AND CAUSING COUNT TO GO UP?
 
     def build_agent(self, agent_path):
         if not agent_path:
             return None
+        elif agent_path == 'greedy':
+            return GreedyAgent()
+        elif agent_path == 'random':
+            return RandomAgent()
         elif 'DQN' in agent_path:
             config = dqn.DEFAULT_CONFIG.copy()
             config["framework"] = "torch"
-            trainer = dqn.DQNTrainer(config=config, env="motgym:Mot17ParallelEnv-v0")
+            trainer = dqn.DQNTrainer(config=config, env="motgym:BaseFairmotEnv-v0")
         elif 'PPO' in agent_path:
             config = ppo.DEFAULT_CONFIG.copy()
             config["framework"] = "torch"
-            trainer = ppo.PPOTrainer(config=config, env="motgym:Mot17Env-v0")
+            trainer = ppo.PPOTrainer(config=config, env="motgym:BaseFairmotEnv-v0")
+        elif 'IMPALA' in agent_path:
+            config = impala.DEFAULT_CONFIG.copy()
+            config["framework"] = "torch"
+            trainer = impala.ImpalaTrainer(config=config, env="motgym:BaseFairmotEnv-v0")
         trainer.restore(agent_path)
         return trainer
 
@@ -127,10 +145,14 @@ class AgentJDETracker(TrainAgentJDETracker):
         dets = dets[remain_inds]
         id_feature = id_feature[remain_inds]
 
+        # Calculate maximum overlap of each detection with neighbouring detections
+        # Lower score means more overlap, min iou score = worst overlap
+        min_iou_scores = get_min_iou_scores(dets)
+
         if len(dets) > 0:
             '''Detections'''
-            detections = [AgentSTrack(AgentSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f, 
-            agent=self.agent) for (tlbrs, f) in zip(dets[:, :5], id_feature)]
+            detections = [AgentSTrack(AgentSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f, min_iou_score, agent=self.agent)
+                    for (tlbrs, f, min_iou_score) in zip(dets[:, :5], id_feature, min_iou_scores)]
         else:
             detections = []
             
@@ -149,8 +171,11 @@ class AgentJDETracker(TrainAgentJDETracker):
         #for strack in strack_pool:
             #strack.predict()
         AgentSTrack.multi_predict(strack_pool)
-        dists = matching.embedding_distance(strack_pool, detections)
-        #dists = matching.iou_distance(strack_pool, detections)        
+        if self.lookup_gallery:
+            dists = custom_embedding_distance(strack_pool, detections)
+        else:
+            dists = matching.embedding_distance(strack_pool, detections)
+        # dists = matching.iou_distance(strack_pool, detections)        
         dists = matching.fuse_motion(self.kalman_filter, dists, strack_pool, detections)
         matches, u_track, u_detection = matching.linear_assignment(dists, thresh=0.4)
 

@@ -14,7 +14,7 @@ from .utils.evaluation import Evaluator
 from .utils.timer import Timer
 from .utils.io import unzip_objs
 
-
+# Generalisable to any tracker (Hence obs/action space not defined)
 class BasicMotEnv(gym.Env):
     def __init__(self, dataset, detections):
         self.action_space = None
@@ -27,7 +27,7 @@ class BasicMotEnv(gym.Env):
         self.gym_path = BasicMotEnv._get_gym_path()
         self.data_dir = osp.join(self.gym_path, 'datasets', dataset)
         self.dets_dir = osp.join(self.gym_path, 'detections', detections)
-        self.results_dir = BasicMotEnv._set_results_dir(self.gym_path)
+        self.output_dir = BasicMotEnv._set_output_dir(self.gym_path)
         self.seqs = os.listdir(self.data_dir)
 
         self.tracker_args = None
@@ -163,11 +163,11 @@ class BasicMotEnv(gym.Env):
         print(strsummary)
 
     @staticmethod
-    def _set_results_dir(root_path):
+    def _set_output_dir(root_path):
         timestamp = dt.datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
-        results_dir = osp.join(root_path, 'results', timestamp)
-        os.makedirs(results_dir, exist_ok=True)
-        return results_dir
+        output_dir = osp.join(root_path, 'outpu', timestamp)
+        os.makedirs(output_dir, exist_ok=True)
+        return output_dir
 
     @staticmethod
     def _get_gym_path():

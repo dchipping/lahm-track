@@ -15,20 +15,6 @@ from ..base_env import BasicMotEnv
 class ParallelFairmotEnv(BasicMotEnv):
     def __init__(self, dataset, detections):
         super().__init__(dataset, detections)
-        '''
-        Action Space: {0, 1}
-        0 - Ignore encoding
-        1 - Add encoding to gallery
-        '''
-        self.action_space = spaces.Discrete(2)
-        '''
-        Observation Space: [1., 1., 100.]
-        0. -> 1. - Detection confidence
-        0. -> 1. - Max cosine similarity
-        0. -> 100. - Feature gallery size
-        '''
-        self.observation_space = spaces.Box(
-            np.array([0., -1., 0.]), np.array([1., 1., 100.]), shape=(3,), dtype=float)
 
         self.tracker_args = opts().init(['mot'])
 
@@ -63,7 +49,7 @@ class ParallelFairmotEnv(BasicMotEnv):
             self._save_results(self.frame_id)
         else:
             done = True
-            results_file = osp.join(self.results_dir, f'{self.seq}.txt')
+            results_file = osp.join(self.output_dir, f'{self.seq}.txt')
             BasicMotEnv._write_results(self.results, results_file, 'mot')
             BasicMotEnv._get_summary(self.evaluator, self.seq, results_file)
         return done

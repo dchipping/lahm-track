@@ -4,34 +4,18 @@ from collections import defaultdict
 import cv2
 import random
 import numpy as np
-from gym import spaces
+
 import FairMOT.src._init_paths
-from modified.fairmot_lookup_train import TrainAgentJDETracker as Tracker
+from modified.fairmot_train import TrainAgentJDETracker as Tracker
 from opts import opts
 
-from ..base_env import BasicMotEnv
+from .base_fairmot_env import BaseFairmotEnv
 
 
-class SequentialFairmotEnv(BasicMotEnv):
+class SequentialFairmotEnv(BaseFairmotEnv):
     _instance = 0
     def __init__(self, dataset, detections):
         super().__init__(dataset, detections)
-        '''
-        Action Space: {0, 1}
-        0 - Ignore encoding
-        1 - Add encoding to gallery
-        '''
-        self.action_space = spaces.Discrete(2)
-        '''
-        Observation Space: [1., 1., 100.]
-        0. -> 1. - Detection confidence
-        0. -> 1. - Max cosine similarity
-        0. -> 100. - Feature gallery size
-        '''
-        self.observation_space = spaces.Box(
-            np.array([0., -1., 0.]), np.array([1., 1., 100.]), shape=(3,), dtype=float)
-
-        self.tracker_args = opts().init(['mot'])
 
     @staticmethod
     def next_instance():
@@ -51,7 +35,7 @@ class SequentialFairmotEnv(BasicMotEnv):
 
         viable_tids = [
             tid for tid,
-            frame_ids in tid_dict.items() if len(frame_ids) > self.frame_rate * 4]
+            frame_ids in tid_dict.items() if len(frame_ids) > self.frame_rate * 1]
         if track_id:
             self.focus_tid = viable_tids[track_id]
         else:
@@ -159,7 +143,7 @@ class SequentialFairmotEnv(BasicMotEnv):
         obs = self._get_obs(self.track)
         return obs
 
-    @BasicMotEnv.calc_fps
+    @BaseFairmotEnv.calc_fps
     def step(self, action):
         for track in self.online_targets:
             if self.track != track:
@@ -174,7 +158,7 @@ class SequentialFairmotEnv(BasicMotEnv):
             reward = 1
             self.acc_error = 1
         else:
-            reward = 1 * self.acc_error
+            reward = -1 #* self.acc_error
             self.acc_error += 1
         self.ep_reward += reward
 
@@ -194,13 +178,13 @@ class SequentialFairmotEnv(BasicMotEnv):
             is_correct = (self.gt_tid == tid)
             is_curr_track = (self.track.track_id == tid)
             if is_curr_track and is_correct:
-                BasicMotEnv._visualize_box(img0, text, bbox, 12, True)
+                self._visualize_box(img0, text, bbox, 12, True)
             elif is_correct:
-                BasicMotEnv._visualize_box(img0, text, bbox, 4, True)
+                self._visualize_box(img0, text, bbox, 4, True)
             elif is_curr_track:
-                BasicMotEnv._visualize_box(img0, text, bbox, 13, True)
+                self._visualize_box(img0, text, bbox, 13, True)
             else:
-                BasicMotEnv._visualize_box(img0, '', bbox, 1, False)
+                self._visualize_box(img0, '', bbox, 1, False)
 
         self._display_frame(img0, self.gt_tid)
 

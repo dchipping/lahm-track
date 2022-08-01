@@ -1,85 +1,115 @@
-import numpy as np
-import torch
-import torch.nn.functional as F
-import random
 from collections import deque
-from scipy import spatial
+
+import numpy as np
+from scipy.spatial.distance import cdist
 
 import FairMOT.src._init_paths
 from tracker import matching
-from tracking_utils.utils import *
-from tracking_utils.kalman_filter import KalmanFilter
 from tracker.basetrack import BaseTrack, TrackState
+from tracking_utils.kalman_filter import KalmanFilter
+from tracking_utils.utils import *
 
-
-class GreedyAgent:
-    @staticmethod
-    def compute_single_action(obs):
-        return 1
 
 class AgentSTrack(BaseTrack):
     shared_kalman = KalmanFilter()
-    def __init__(self, tlwh, score, temp_feat, agent=GreedyAgent()):
+
+    def __init__(self, tlwh, score, temp_feat, min_iou_score, agent=None):
         self._tlwh = np.asarray(tlwh, dtype=np.float)
         self.kalman_filter = None
         self.mean, self.covariance = None, None
         self.is_activated = False
-
-        self.score = score
         self.tracklet_len = 0
 
-        self.freeze_gallery = True if agent is None else False
-        self.agent = agent
-        
-        self.obs = self.init_observation(temp_feat)
+        self.agent = agent # If this is None gallery will be frozen
+
+        self.score = score
+        self.min_iou_score = min_iou_score
         self.curr_feat = temp_feat
-        self.smooth_feat = self.curr_feat.copy()
-        self.features = deque([], maxlen=100)
+
+        self.smooth_feat = temp_feat
+        self.features = deque([], maxlen=30)
         self.alpha = 0.9
- 
+
     def gallery_similarity(self, feat):
-        feat /= np.linalg.norm(feat)
-        max_cosine_simlarity = -1.
+        max_cosine_simlarity = 0.
         if self.features:
-            dists = spatial.distance.cdist(np.array([feat]), np.asarray(self.features), 'cosine')
+            dists = cdist(np.array([feat]), np.asarray(
+                self.features), 'cosine')
             max_cosine_simlarity = np.max(np.ones(dists.shape) - dists)
         return max_cosine_simlarity
 
-    def get_observation(self, new_track):
-        similarity = self.gallery_similarity(new_track.curr_feat)
-        return np.array([new_track.score, similarity, len(self.features)], dtype=float)
+    def average_gallery_distance(self):
+        average_dist = 0.
+        n = len(self.features)
+        if n > 2:
+            feats = np.asarray(self.features)
+            cost_matrix = cdist(feats, feats, 'cosine')
+            pairwise_dists = np.tril(cost_matrix, -1)
+            num_pairs = (n-1)*(n)/2
+            average_dist = np.sum(pairwise_dists) / num_pairs
+        return average_dist
 
-    def init_observation(self, temp_feat):
-        similarity = self.gallery_similarity(temp_feat)
-        return np.array([self.score, similarity, len(self.features)], dtype=float)
+    def get_observation(self, feat, score, min_iou_score):
+        similarity = self.gallery_similarity(feat)
+        average = 0.
+        if self.features:
+            gallery_avg = np.average(self.features, axis=0)
+            average = cdist([gallery_avg], [feat], 'cosine').item()
+        average_dist = self.average_gallery_distance()
+        return np.array([
+            score,
+            similarity,
+            len(self.features),
+            min_iou_score,
+            average,
+            average_dist
+        ], dtype=float)
 
     def update_gallery(self, action, feat):
         '''Translate action to change in gallery'''
-        if self.track_id == 26:
-            print(self.track_id)
-        if action == 1:
+        if action == 0:
+            return
+        elif action == 1:
             self.features.append(feat)
-            self.smooth_feat = self.curr_feat.copy() # Since gallery has no updated we recalulate
-            for i, feat in enumerate(self.features): # Recalculate whole gallery
+        elif action == -1:
+            self.prune_similar()
+        self.curr_feat = feat /np.linalg.norm(feat)
+
+        # Recalculate gallery each update
+        self.smooth_feat = None # Reset smooth_feature
+        for i, feat in enumerate(self.features):
+            if self.smooth_feat is None:
+                self.smooth_feat = feat
+            else:
+                feat /= np.linalg.norm(feat)
                 self.smooth_feat = self.alpha * self.smooth_feat + (1 - self.alpha) * feat
-                self.smooth_feat /= np.linalg.norm(self.smooth_feat)
-        elif action == 0:
-            pass
+            self.smooth_feat /= np.linalg.norm(self.smooth_feat)
+
+    def prune_similar(self):
+        # Remove most similar feature from gallery
+        gallery = np.asarray(self.features)
+        n, _ = gallery.shape
+        cost_matrix = np.eye(n) + cdist(gallery, gallery, 'cosine')
+        flatten_idx = np.argmin(cost_matrix)
+        track1_idx, track2_idx = np.unravel_index(flatten_idx, (n, n))
+        self.features.pop(track1_idx)
 
     def agent_update_features(self, feat, obs):
         '''New method added for RL agent to manage gallery'''
-        feat /= np.linalg.norm(feat)
-        # self.curr_feat = feat
-        if not self.freeze_gallery:
+        if self.agent:
             action = self.agent.compute_single_action(obs)
             self.update_gallery(action, feat)
-    
+
     def re_activate(self, new_track, frame_id, new_id=False):
         self.mean, self.covariance = self.kalman_filter.update(
             self.mean, self.covariance, self.tlwh_to_xyah(new_track.tlwh)
         )
 
-        self.obs = self.get_observation(new_track)
+        self.obs = self.get_observation(
+            new_track.curr_feat,
+            new_track.score,
+            new_track.min_iou_score
+        )
         self.agent_update_features(new_track.curr_feat, self.obs)
         self.tracklet_len = 0
         self.state = TrackState.Tracked
@@ -105,15 +135,19 @@ class AgentSTrack(BaseTrack):
         self.state = TrackState.Tracked
         self.is_activated = True
 
-        self.score = new_track.score
-        self.obs = self.get_observation(new_track)
+        self.obs = self.get_observation(
+            new_track.curr_feat,
+            new_track.score,
+            new_track.min_iou_score
+        )
         self.agent_update_features(new_track.curr_feat, self.obs)
-    
+
     def predict(self):
         mean_state = self.mean.copy()
         if self.state != TrackState.Tracked:
             mean_state[7] = 0
-        self.mean, self.covariance = self.kalman_filter.predict(mean_state, self.covariance)
+        self.mean, self.covariance = self.kalman_filter.predict(
+            mean_state, self.covariance)
 
     @staticmethod
     def multi_predict(stracks):
@@ -123,7 +157,8 @@ class AgentSTrack(BaseTrack):
             for i, st in enumerate(stracks):
                 if st.state != TrackState.Tracked:
                     multi_mean[i][7] = 0
-            multi_mean, multi_covariance = AgentSTrack.shared_kalman.multi_predict(multi_mean, multi_covariance)
+            multi_mean, multi_covariance = AgentSTrack.shared_kalman.multi_predict(
+                multi_mean, multi_covariance)
             for i, (mean, cov) in enumerate(zip(multi_mean, multi_covariance)):
                 stracks[i].mean = mean
                 stracks[i].covariance = cov
@@ -132,7 +167,8 @@ class AgentSTrack(BaseTrack):
         """Start a new tracklet"""
         self.kalman_filter = kalman_filter
         self.track_id = self.next_id()
-        self.mean, self.covariance = self.kalman_filter.initiate(self.tlwh_to_xyah(self._tlwh))
+        self.mean, self.covariance = self.kalman_filter.initiate(
+            self.tlwh_to_xyah(self._tlwh))
 
         self.tracklet_len = 0
         self.state = TrackState.Tracked
@@ -141,6 +177,13 @@ class AgentSTrack(BaseTrack):
         #self.is_activated = True
         self.frame_id = frame_id
         self.start_frame = frame_id
+
+        self.obs = self.get_observation(
+            self.curr_feat,
+            self.score,
+            self.min_iou_score
+        )
+        self.agent_update_features(self.curr_feat, self.obs)
 
     @property
     def tlwh(self):
@@ -193,7 +236,7 @@ class AgentSTrack(BaseTrack):
 
 
 class TrainAgentJDETracker():
-    def __init__(self, opt, frame_rate=30):
+    def __init__(self, opt, frame_rate=30, lookup_gallery=False):
         self.opt = opt
         self.tracked_stracks = []  # type: list[STrack]
         self.lost_stracks = []  # type: list[STrack]
@@ -205,8 +248,9 @@ class TrainAgentJDETracker():
         self.max_per_image = opt.K
         self.mean = np.array(opt.mean, dtype=np.float32).reshape(1, 1, 3)
         self.std = np.array(opt.std, dtype=np.float32).reshape(1, 1, 3)
-        
+
         self.kalman_filter = KalmanFilter()
+        self.lookup_gallery = lookup_gallery
 
     def reset(self):
         BaseTrack._count = 0
@@ -223,13 +267,17 @@ class TrainAgentJDETracker():
 
         ### Detections and features are pre-generated using gen_fairmot_jde.py ###
 
+        # Calculate maximum overlap of each detection with neighbouring detections
+        # Lower score means more overlap, min iou score = worst overlap
+        min_iou_scores = get_min_iou_scores(dets)
+
         if len(dets) > 0:
             '''Detections'''
-            detections = [AgentSTrack(AgentSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f, agent=None)
-             for (tlbrs, f) in zip(dets[:, :5], id_feature)]
+            detections = [AgentSTrack(AgentSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f, min_iou_score, agent=None)
+                             for (tlbrs, f, min_iou_score) in zip(dets[:, :5], id_feature, min_iou_scores)]
         else:
             detections = []
-            
+
         ''' Add newly detected tracklets to tracked_stracks'''
         unconfirmed = []
         tracked_stracks = []  # type: list[STrack]
@@ -242,13 +290,18 @@ class TrainAgentJDETracker():
         ''' Step 2: First association, with embedding'''
         strack_pool = joint_stracks(tracked_stracks, self.lost_stracks)
         # Predict the current location with KF
-        #for strack in strack_pool:
-            #strack.predict()
+        # for strack in strack_pool:
+        # strack.predict()
         AgentSTrack.multi_predict(strack_pool)
-        dists = matching.embedding_distance(strack_pool, detections)
-        #dists = matching.iou_distance(strack_pool, detections)        
-        dists = matching.fuse_motion(self.kalman_filter, dists, strack_pool, detections)
-        matches, u_track, u_detection = matching.linear_assignment(dists, thresh=0.4)
+        if self.lookup_gallery:
+            dists = custom_embedding_distance(strack_pool, detections)
+        else:
+            dists = matching.embedding_distance(strack_pool, detections)
+        #dists = matching.iou_distance(strack_pool, detections)
+        dists = matching.fuse_motion(
+            self.kalman_filter, dists, strack_pool, detections)
+        matches, u_track, u_detection = matching.linear_assignment(
+            dists, thresh=0.4)
 
         for itracked, idet in matches:
             track = strack_pool[itracked]
@@ -262,9 +315,11 @@ class TrainAgentJDETracker():
 
         ''' Step 3: Second association, with IOU'''
         detections = [detections[i] for i in u_detection]
-        r_tracked_stracks = [strack_pool[i] for i in u_track if strack_pool[i].state == TrackState.Tracked]
+        r_tracked_stracks = [strack_pool[i]
+                             for i in u_track if strack_pool[i].state == TrackState.Tracked]
         dists = matching.iou_distance(r_tracked_stracks, detections)
-        matches, u_track, u_detection = matching.linear_assignment(dists, thresh=0.5)
+        matches, u_track, u_detection = matching.linear_assignment(
+            dists, thresh=0.5)
 
         for itracked, idet in matches:
             track = r_tracked_stracks[itracked]
@@ -285,7 +340,8 @@ class TrainAgentJDETracker():
         '''Deal with unconfirmed tracks, usually tracks with only one beginning frame'''
         detections = [detections[i] for i in u_detection]
         dists = matching.iou_distance(unconfirmed, detections)
-        matches, u_unconfirmed, u_detection = matching.linear_assignment(dists, thresh=0.7)
+        matches, u_unconfirmed, u_detection = matching.linear_assignment(
+            dists, thresh=0.7)
         for itracked, idet in matches:
             unconfirmed[itracked].update(detections[idet], frame_id)
             activated_starcks.append(unconfirmed[itracked])
@@ -309,14 +365,20 @@ class TrainAgentJDETracker():
 
         # print('Ramained match {} s'.format(t4-t3))
 
-        self.tracked_stracks = [t for t in self.tracked_stracks if t.state == TrackState.Tracked]
-        self.tracked_stracks = joint_stracks(self.tracked_stracks, activated_starcks)
-        self.tracked_stracks = joint_stracks(self.tracked_stracks, refind_stracks)
-        self.lost_stracks = sub_stracks(self.lost_stracks, self.tracked_stracks)
+        self.tracked_stracks = [
+            t for t in self.tracked_stracks if t.state == TrackState.Tracked]
+        self.tracked_stracks = joint_stracks(
+            self.tracked_stracks, activated_starcks)
+        self.tracked_stracks = joint_stracks(
+            self.tracked_stracks, refind_stracks)
+        self.lost_stracks = sub_stracks(
+            self.lost_stracks, self.tracked_stracks)
         self.lost_stracks.extend(lost_stracks)
-        self.lost_stracks = sub_stracks(self.lost_stracks, self.removed_stracks)
+        self.lost_stracks = sub_stracks(
+            self.lost_stracks, self.removed_stracks)
         self.removed_stracks.extend(removed_stracks)
-        self.tracked_stracks, self.lost_stracks = remove_duplicate_stracks(self.tracked_stracks, self.lost_stracks)
+        self.tracked_stracks, self.lost_stracks = remove_duplicate_stracks(
+            self.tracked_stracks, self.lost_stracks)
 
         # logger.debug('===========Frame {}=========='.format(frame_id))
         # logger.debug('Activated: {}'.format([track.track_id for track in activated_starcks]))
@@ -366,3 +428,44 @@ def remove_duplicate_stracks(stracksa, stracksb):
     resa = [t for i, t in enumerate(stracksa) if not i in dupa]
     resb = [t for i, t in enumerate(stracksb) if not i in dupb]
     return resa, resb
+
+
+def custom_embedding_distance(tracks, detections, metric='cosine'):
+    """
+    :param tracks: list[STrack]
+    :param detections: list[BaseTrack]
+    :param metric:
+    :return: cost_matrix np.ndarray
+    """
+
+    cost_matrix = np.zeros((len(tracks), len(detections)), dtype=np.float)
+    if cost_matrix.size == 0:
+        return cost_matrix
+    det_features = np.asarray(
+        [track.curr_feat for track in detections], dtype=np.float)
+
+    # Pick min from gallery as smooth_feat (in place of moving average)
+    for i, track in enumerate(tracks):
+        if track.features:
+            gallery_cost_matrix = cdist(np.asarray(track.features), det_features, metric)
+            gallery_idx, _ = np.unravel_index(np.argmin(gallery_cost_matrix), gallery_cost_matrix.shape)
+            track.smooth_feat = track.features[gallery_idx]
+
+    track_features = np.asarray(
+        [track.smooth_feat for track in tracks], dtype=np.float)
+    cost_matrix = np.maximum(0.0, cdist(
+        track_features, det_features, metric))  # Nomalized features
+    return cost_matrix
+
+
+def get_min_iou_scores(dets):
+    # Calculate maximum overlap of each detection with neighbouring detections
+    # Lower score means more overlap, min iou score = worst overlap
+    min_iou_scores = []
+    n_dets = dets.shape[0]
+    for idx in range(n_dets):
+        mask = np.ones((n_dets,), dtype=bool); mask[idx] = False
+        neighbours_dets = dets[mask, :]
+        ious = matching.iou_distance(np.expand_dims(dets[idx, :], axis=0), neighbours_dets)
+        min_iou_scores.append(np.min(ious))
+    return min_iou_scores

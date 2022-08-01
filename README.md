@@ -5,6 +5,6 @@
 
 TODO:
 - Experiment Scripts
-- Baseline comparison with new gallery lookup
+- Update obs/action space
 - Random init of gallery
-- average cdist of tracks
+- Prune least seen track in gallery
