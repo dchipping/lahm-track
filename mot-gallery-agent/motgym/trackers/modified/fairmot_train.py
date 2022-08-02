@@ -27,7 +27,7 @@ class AgentSTrack(BaseTrack):
         self.curr_feat = temp_feat
 
         self.smooth_feat = temp_feat
-        self.features = deque([], maxlen=30)
+        self.features = deque([])
         self.alpha = 0.9
 
     def gallery_similarity(self, feat):
@@ -449,7 +449,8 @@ def custom_embedding_distance(tracks, detections, metric='cosine'):
         if track.features:
             gallery_cost_matrix = cdist(np.asarray(track.features), det_features, metric)
             gallery_idx, _ = np.unravel_index(np.argmin(gallery_cost_matrix), gallery_cost_matrix.shape)
-            track.smooth_feat = track.features[gallery_idx]
+            feat = np.linalg.norm(track.features[gallery_idx])
+            track.smooth_feat = feat/np.linalg.norm(feat)
 
     track_features = np.asarray(
         [track.smooth_feat for track in tracks], dtype=np.float)

@@ -1,4 +1,4 @@
 *.npy
 *.npz
-short-seq/
+*short-seq/
 !.gitignore

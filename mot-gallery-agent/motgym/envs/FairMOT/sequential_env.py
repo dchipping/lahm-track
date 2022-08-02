@@ -132,7 +132,7 @@ class SequentialFairmotEnv(BaseFairmotEnv):
 
         self.online_targets = self._track_update(self.frame_id)
         # Only release loop once the first track(s) confirmed
-        while not self.online_targets or not self.gt_tid > 0:
+        while not self.online_targets or self.gt_tid == 0:
             done = self._step_frame()
             self.gt_tid = self._get_gt_tid()
             if done: raise Exception('Sequence too short')

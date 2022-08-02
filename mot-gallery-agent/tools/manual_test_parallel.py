@@ -1,3 +1,5 @@
+# GNOME 'Force Quit' Issue - change pop-up delay to 60s
+# gsettings set org.gnome.mutter check-alive-timeout 60000
 import gym
 
 

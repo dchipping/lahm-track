@@ -8,6 +8,8 @@ import motmetrics as mm
 import numpy as np
 import torch
 import cv2
+import sys
+
 import motgym.trackers.FairMOT.src._init_paths
 import datasets.dataset.jde as datasets
 from modified.fairmot_agent import AgentJDETracker
@@ -17,6 +19,12 @@ from tracking_utils.evaluation import Evaluator
 from tracking_utils.log import logger
 from tracking_utils.timer import Timer
 from tracking_utils.utils import mkdir_if_missing
+
+# Update sys path with tools dir
+path = os.path.join(os.getcwd(), 'tools')
+if path not in sys.path:
+    sys.path.insert(0, path)
+import trackeval # from TrackEval import trackeval
 
 
 def write_results(filename, results, data_type):
@@ -87,9 +95,10 @@ def eval_seq(opt, dataloader, data_type, result_filename, show_image=True,
 
 
 def main(opt, data_root='/data/MOT16/train', seqs=('MOT16-05',), exp_name='demo',
-         show_image=True, lookup_gallery=False, agent_path=None):
+         show_image=True, lookup_gallery=False, agent_path=None, run_name=None):
     logger.setLevel(logging.INFO)
-    result_root = os.path.join(os.getcwd(), 'results', exp_name)
+    run_name = run_name if run_name else dt.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+    result_root = os.path.join(os.getcwd(), 'results', exp_name, run_name)
     mkdir_if_missing(result_root)
     data_type = 'mot'
 
@@ -97,41 +106,66 @@ def main(opt, data_root='/data/MOT16/train', seqs=('MOT16-05',), exp_name='demo'
     accs = []
     n_frame = 0
     timer_avgs, timer_calls = [], []
-    for seq in seqs:
-        logger.info('start seq: {}'.format(seq))
-        dataloader = datasets.LoadImages(
-            osp.join(data_root, seq, 'img1'), opt.img_size)
-        result_filename = os.path.join(result_root, '{}.txt'.format(seq))
-        meta_info = open(os.path.join(data_root, seq, 'seqinfo.ini')).read()
-        frame_rate = int(meta_info[meta_info.find(
-            'frameRate') + 10:meta_info.find('\nseqLength')])
-        nf, ta, tc = eval_seq(opt, dataloader, data_type, result_filename,
-                              show_image=show_image, frame_rate=frame_rate, lookup_gallery=lookup_gallery, agent_path=agent_path)
-        n_frame += nf
-        timer_avgs.append(ta)
-        timer_calls.append(tc)
+    # for seq in seqs:
+    #     logger.info('start seq: {}'.format(seq))
+    #     dataloader = datasets.LoadImages(
+    #         osp.join(data_root, seq, 'img1'), opt.img_size)
+    #     result_filename = os.path.join(result_root, '{}.txt'.format(seq))
+    #     meta_info = open(os.path.join(data_root, seq, 'seqinfo.ini')).read()
+    #     frame_rate = int(meta_info[meta_info.find(
+    #         'frameRate') + 10:meta_info.find('\nseqLength')])
+    #     nf, ta, tc = eval_seq(opt, dataloader, data_type, result_filename,
+    #                           show_image=show_image, frame_rate=frame_rate, lookup_gallery=lookup_gallery, agent_path=agent_path)
+    #     n_frame += nf
+    #     timer_avgs.append(ta)
+    #     timer_calls.append(tc)
 
-        # eval
-        logger.info('Evaluate seq: {}'.format(seq))
-        evaluator = Evaluator(data_root, seq, data_type)
-        accs.append(evaluator.eval_file(result_filename))
+    #     # eval
+    #     logger.info('Evaluate seq: {}'.format(seq))
+    #     evaluator = Evaluator(data_root, seq, data_type)
+    #     accs.append(evaluator.eval_file(result_filename))
 
-    timer_avgs = np.asarray(timer_avgs)
-    timer_calls = np.asarray(timer_calls)
-    all_time = np.dot(timer_avgs, timer_calls)
-    avg_time = all_time / np.sum(timer_calls)
-    logger.info('Time elapsed: {:.2f} seconds, FPS: {:.2f}'.format(
-        all_time, 1.0 / avg_time))
+    # timer_avgs = np.asarray(timer_avgs)
+    # timer_calls = np.asarray(timer_calls)
+    # all_time = np.dot(timer_avgs, timer_calls)
+    # avg_time = all_time / np.sum(timer_calls)
+    # logger.info('Time elapsed: {:.2f} seconds, FPS: {:.2f}'.format(
+    #     all_time, 1.0 / avg_time))
 
-    # get summary
-    metrics = mm.metrics.motchallenge_metrics
-    mh = mm.metrics.create()
-    summary = Evaluator.get_summary(accs, seqs, metrics)
-    strsummary = mm.io.render_summary(
-        summary,
-        formatters=mh.formatters,
-        namemap=mm.io.motchallenge_metric_names
-    )
-    print(strsummary)
-    Evaluator.save_summary(summary, os.path.join(
-        result_root, 'summary_{}.xlsx'.format(exp_name)))
+    # # get summary
+    # metrics = mm.metrics.motchallenge_metrics
+    # mh = mm.metrics.create()
+    # summary = Evaluator.get_summary(accs, seqs, metrics)
+    # strsummary = mm.io.render_summary(
+    #     summary,
+    #     formatters=mh.formatters,
+    #     namemap=mm.io.motchallenge_metric_names
+    # )
+    # print(strsummary)
+    # Evaluator.save_summary(summary, os.path.join(
+    #     result_root, 'summary_{}.xlsx'.format(run_name)))
+
+    seqmap_path = osp.join(data_root, 'seqmap.txt')
+    if not osp.exists(seqmap_path):
+        seqs = map(lambda x: x + '\n', os.listdir(data_root))
+        with open(seqmap_path, 'w') as seqmap_file:
+            seqmap_file.write('name\n')
+            seqmap_file.writelines(seqs)
+
+    eval_config = trackeval.Evaluator.get_default_eval_config()
+    eval_config['DISPLAY_LESS_PROGRESS'] = False
+    dataset_config = trackeval.datasets.MotChallenge2DBox.get_default_dataset_config()
+    dataset_config['GT_FOLDER'] = data_root
+    dataset_config['TRACKERS_FOLDER'] = osp.join(os.getcwd(), 'results')
+    dataset_config['TRACKERS_TO_EVAL'] = [osp.join(exp_name, run_name)]
+    dataset_config['TRACKER_SUB_FOLDER'] = ''
+    dataset_config['SPLIT_TO_EVAL'] = Path(data_root).name
+    dataset_config['OUTPUT_FOLDER'] = osp.join(os.getcwd(), 'results')
+    dataset_config['SKIP_SPLIT_FOL'] = True
+    dataset_config['SEQMAP_FILE'] = osp.join(data_root, 'seqmap.txt')
+
+    # Run code
+    evaluator = trackeval.Evaluator(eval_config)
+    dataset_list = [trackeval.datasets.MotChallenge2DBox(dataset_config)]
+    metrics_list = [trackeval.metrics.HOTA()]
+    evaluator.evaluate(dataset_list, metrics_list)

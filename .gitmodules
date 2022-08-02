@@ -1,5 +1,10 @@
 # git submodule update --init
 
+[submodule "TrackEval"]
+	path = tools/TrackEval
+	url = https://github.com/JonathonLuiten/TrackEval.git
+	ignore = dirty
+
 [submodule "deep_sort"]
 	path = mot-gallery-agent/motgym/trackers/deep_sort
 	url = https://github.com/nwojke/deep_sort.git

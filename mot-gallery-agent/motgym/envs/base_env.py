@@ -165,7 +165,7 @@ class BasicMotEnv(gym.Env):
     @staticmethod
     def _set_output_dir(root_path):
         timestamp = dt.datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
-        output_dir = osp.join(root_path, 'outpu', timestamp)
+        output_dir = osp.join(root_path, 'output', timestamp)
         os.makedirs(output_dir, exist_ok=True)
         return output_dir
 
