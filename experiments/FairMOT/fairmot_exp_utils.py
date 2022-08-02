@@ -24,7 +24,7 @@ from tracking_utils.utils import mkdir_if_missing
 path = os.path.join(os.getcwd(), 'tools')
 if path not in sys.path:
     sys.path.insert(0, path)
-import trackeval # from TrackEval import trackeval
+from TrackEval import trackeval
 
 
 def write_results(filename, results, data_type):
@@ -95,7 +95,7 @@ def eval_seq(opt, dataloader, data_type, result_filename, show_image=True,
 
 
 def main(opt, data_root='/data/MOT16/train', seqs=('MOT16-05',), exp_name='demo',
-         show_image=True, lookup_gallery=False, agent_path=None, run_name=None):
+         show_image=True, lookup_gallery=False, agent_path=None, run_name='original'):
     logger.setLevel(logging.INFO)
     run_name = run_name if run_name else dt.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     result_root = os.path.join(os.getcwd(), 'results', exp_name, run_name)
