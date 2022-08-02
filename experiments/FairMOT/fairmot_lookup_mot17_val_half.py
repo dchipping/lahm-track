@@ -13,4 +13,5 @@ main(opt,
     seqs=sorted(os.listdir(DATA_DIR)),
     exp_name=Path(__file__).stem,
     show_image=False,
-    agent_path='random')
+    lookup_gallery=True,
+    agent_path='greedy')

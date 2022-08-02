@@ -4,42 +4,25 @@ from collections import defaultdict
 import cv2
 import random
 import numpy as np
-from gym import spaces
+
 import FairMOT.src._init_paths
 from modified.fairmot_train import TrainAgentJDETracker as Tracker
 from opts import opts
-from tracker.basetrack import BaseTrack
 
-from ..base_env import BasicMotEnv
+from .base_fairmot_env import BaseFairmotEnv
 
 
-class SequentialFairmotEnv(BasicMotEnv):
+class SequentialFairmotEnv(BaseFairmotEnv):
     _instance = 0
     def __init__(self, dataset, detections):
         super().__init__(dataset, detections)
-        '''
-        Action Space: {0, 1}
-        0 - Ignore encoding
-        1 - Add encoding to gallery
-        '''
-        self.action_space = spaces.Discrete(2)
-        '''
-        Observation Space: [1., 1., 100.]
-        0. -> 1. - Detection confidence
-        0. -> 1. - Max cosine similarity
-        0. -> 100. - Feature gallery size
-        '''
-        self.observation_space = spaces.Box(
-            np.array([0., -1., 0.]), np.array([1., 1., 100.]), shape=(3,), dtype=float)
-
-        self.tracker_args = opts().init(['mot'])
 
     @staticmethod
     def next_instance():
         SequentialFairmotEnv._instance += 1
         return SequentialFairmotEnv._instance
         
-    def assign_target(self):
+    def assign_target(self, track_id=None):
         print(f'Loading data from: {osp.join(self.data_dir, self.seq)}')
         self._load_dataset(self.seq)
         self._load_detections(self.seq)
@@ -52,9 +35,15 @@ class SequentialFairmotEnv(BasicMotEnv):
 
         viable_tids = [
             tid for tid,
-            frame_ids in tid_dict.items() if len(frame_ids) > self.frame_rate * 2]
-        # self.focus_tid = viable_tids[self.next_instance() % len(viable_tids)]
-        self.focus_tid = viable_tids[random.randint(0, len(viable_tids)-1)]
+            frame_ids in tid_dict.items() if len(frame_ids) > self.frame_rate * 1]
+        if track_id:
+            self.focus_tid = viable_tids[track_id]
+        else:
+            idx = random.randint(0, len(viable_tids)-1)
+            print(f'Using random index {idx}')
+            self.focus_tid = viable_tids[idx]
+            # self.focus_tid = viable_tids[self.next_instance() % len(viable_tids)]
+            
         self.frame_ids = tid_dict[self.focus_tid]
         print(f'Assigned ground truth TrackID: {self.focus_tid}')
         print(f'Evaluating frame {self.frame_ids[0]}-{self.frame_ids[-1]} (Len {self.frame_ids[-1]-self.frame_ids[0]})')
@@ -94,17 +83,17 @@ class SequentialFairmotEnv(BasicMotEnv):
         return track.obs
 
     def _get_info(self, track):
-        tids = {t.track_id for t in self.online_targets}
         track_info = {
             "track_id": track.track_id,
             "gallery_size": len(track.features),
-            # "track_idx": self.track_idx
         }
-        seq_info = {"seq_len": self.seq_len, "frame_rate": self.frame_rate}
+        seq_info = {
+            "seq_len": self.seq_len,
+            "frame_rate": self.frame_rate
+        }
         return {
             "curr_frame": self.frame_id,
             "ep_reward": self.ep_reward,
-            "tracks_ids": tids,
             "curr_track": track_info,
             "seq_info": seq_info
         }
@@ -143,7 +132,7 @@ class SequentialFairmotEnv(BasicMotEnv):
 
         self.online_targets = self._track_update(self.frame_id)
         # Only release loop once the first track(s) confirmed
-        while not self.online_targets or not self.gt_tid > 0:
+        while not self.online_targets or self.gt_tid == 0:
             done = self._step_frame()
             self.gt_tid = self._get_gt_tid()
             if done: raise Exception('Sequence too short')
@@ -154,21 +143,22 @@ class SequentialFairmotEnv(BasicMotEnv):
         obs = self._get_obs(self.track)
         return obs
 
-    @BasicMotEnv.calc_fps
+    @BaseFairmotEnv.calc_fps
     def step(self, action):
         for track in self.online_targets:
             if self.track != track:
-                action = 1
+                action = random.randint(0,1)
             track.update_gallery(action, track.curr_feat)
 
-        reward = 0
         done = self._step_frame()
         self.gt_tid = self._get_gt_tid()
-        if self.track.track_id == self.gt_tid:
-            reward += 1
+        TN = not self.gt_tid and not self.track in self.online_targets
+        TP = self.track.track_id == self.gt_tid
+        if TN or TP:
+            reward = 1
             self.acc_error = 1
         else:
-            reward -= 2 * self.acc_error
+            reward = -1 #* self.acc_error
             self.acc_error += 1
         self.ep_reward += reward
 
@@ -188,13 +178,13 @@ class SequentialFairmotEnv(BasicMotEnv):
             is_correct = (self.gt_tid == tid)
             is_curr_track = (self.track.track_id == tid)
             if is_curr_track and is_correct:
-                BasicMotEnv._visualize_box(img0, text, bbox, 12, True)
+                self._visualize_box(img0, text, bbox, 12, True)
             elif is_correct:
-                BasicMotEnv._visualize_box(img0, text, bbox, 4, True)
+                self._visualize_box(img0, text, bbox, 4, True)
             elif is_curr_track:
-                BasicMotEnv._visualize_box(img0, text, bbox, 13, True)
+                self._visualize_box(img0, text, bbox, 13, True)
             else:
-                BasicMotEnv._visualize_box(img0, '', bbox, 1, False)
+                self._visualize_box(img0, '', bbox, 1, False)
 
         self._display_frame(img0, self.gt_tid)
 

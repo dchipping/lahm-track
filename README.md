@@ -4,9 +4,7 @@
 - Includes mot-gallery-agent
 
 TODO:
-- Overlap Obs Space
-- Remove track from gallery
 - Experiment Scripts
-
-- Random init
-- 
+- Update obs/action space
+- Random init of gallery
+- Prune least seen track in gallery

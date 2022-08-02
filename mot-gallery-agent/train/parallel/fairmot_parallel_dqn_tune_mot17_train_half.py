@@ -1,6 +1,9 @@
 import gym
 from ray import rllib
+import os
+from pathlib import Path
 from ray.rllib.agents import ppo, dqn
+
 from ray.tune.logger import pretty_print
 
 from motgym.envs.FairMOT.parallel_env import Mot17ParallelEnv
@@ -15,10 +18,13 @@ from motgym.envs.FairMOT.parallel_env import Mot17ParallelEnv
 # Configure trainer
 config = dqn.DEFAULT_CONFIG.copy()
 config["framework"] = "torch"
-trainer = dqn.DQNTrainer(config=config, env=CustomEnv)
+# config["local_dir"] = os.path.join(os.path.dirname(__file__), 'trainresults')
+# config["name"] = Path(__file__).name
+# trainer = dqn.DQNTrainer(config=config, env=CustomEnv)
+trainer = dqn.DQNTrainer(config=config, env="motgym:Mot17ParallelEnv-v0")
 
 # Train agent on env
-for i in range(1000):
+for i in range(3):
     # Perform one iteration of training the policy with PPO
     result = trainer.train()
     print(pretty_print(result))
