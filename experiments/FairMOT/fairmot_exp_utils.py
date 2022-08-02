@@ -95,7 +95,7 @@ def eval_seq(opt, dataloader, data_type, result_filename, show_image=True,
 
 
 def main(opt, data_root='/data/MOT16/train', seqs=('MOT16-05',), exp_name='demo',
-         show_image=True, lookup_gallery=False, agent_path=None, run_name='original'):
+         show_image=True, lookup_gallery=False, agent_path=None, run_name=None):
     logger.setLevel(logging.INFO)
     run_name = run_name if run_name else dt.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     result_root = os.path.join(os.getcwd(), 'results', exp_name, run_name)
@@ -106,44 +106,44 @@ def main(opt, data_root='/data/MOT16/train', seqs=('MOT16-05',), exp_name='demo'
     accs = []
     n_frame = 0
     timer_avgs, timer_calls = [], []
-    # for seq in seqs:
-    #     logger.info('start seq: {}'.format(seq))
-    #     dataloader = datasets.LoadImages(
-    #         osp.join(data_root, seq, 'img1'), opt.img_size)
-    #     result_filename = os.path.join(result_root, '{}.txt'.format(seq))
-    #     meta_info = open(os.path.join(data_root, seq, 'seqinfo.ini')).read()
-    #     frame_rate = int(meta_info[meta_info.find(
-    #         'frameRate') + 10:meta_info.find('\nseqLength')])
-    #     nf, ta, tc = eval_seq(opt, dataloader, data_type, result_filename,
-    #                           show_image=show_image, frame_rate=frame_rate, lookup_gallery=lookup_gallery, agent_path=agent_path)
-    #     n_frame += nf
-    #     timer_avgs.append(ta)
-    #     timer_calls.append(tc)
+    for seq in seqs:
+        logger.info('start seq: {}'.format(seq))
+        dataloader = datasets.LoadImages(
+            osp.join(data_root, seq, 'img1'), opt.img_size)
+        result_filename = os.path.join(result_root, '{}.txt'.format(seq))
+        meta_info = open(os.path.join(data_root, seq, 'seqinfo.ini')).read()
+        frame_rate = int(meta_info[meta_info.find(
+            'frameRate') + 10:meta_info.find('\nseqLength')])
+        nf, ta, tc = eval_seq(opt, dataloader, data_type, result_filename,
+                              show_image=show_image, frame_rate=frame_rate, lookup_gallery=lookup_gallery, agent_path=agent_path)
+        n_frame += nf
+        timer_avgs.append(ta)
+        timer_calls.append(tc)
 
-    #     # eval
-    #     logger.info('Evaluate seq: {}'.format(seq))
-    #     evaluator = Evaluator(data_root, seq, data_type)
-    #     accs.append(evaluator.eval_file(result_filename))
+        # eval
+        logger.info('Evaluate seq: {}'.format(seq))
+        evaluator = Evaluator(data_root, seq, data_type)
+        accs.append(evaluator.eval_file(result_filename))
 
-    # timer_avgs = np.asarray(timer_avgs)
-    # timer_calls = np.asarray(timer_calls)
-    # all_time = np.dot(timer_avgs, timer_calls)
-    # avg_time = all_time / np.sum(timer_calls)
-    # logger.info('Time elapsed: {:.2f} seconds, FPS: {:.2f}'.format(
-    #     all_time, 1.0 / avg_time))
+    timer_avgs = np.asarray(timer_avgs)
+    timer_calls = np.asarray(timer_calls)
+    all_time = np.dot(timer_avgs, timer_calls)
+    avg_time = all_time / np.sum(timer_calls)
+    logger.info('Time elapsed: {:.2f} seconds, FPS: {:.2f}'.format(
+        all_time, 1.0 / avg_time))
 
-    # # get summary
-    # metrics = mm.metrics.motchallenge_metrics
-    # mh = mm.metrics.create()
-    # summary = Evaluator.get_summary(accs, seqs, metrics)
-    # strsummary = mm.io.render_summary(
-    #     summary,
-    #     formatters=mh.formatters,
-    #     namemap=mm.io.motchallenge_metric_names
-    # )
-    # print(strsummary)
-    # Evaluator.save_summary(summary, os.path.join(
-    #     result_root, 'summary_{}.xlsx'.format(run_name)))
+    # get summary
+    metrics = mm.metrics.motchallenge_metrics
+    mh = mm.metrics.create()
+    summary = Evaluator.get_summary(accs, seqs, metrics)
+    strsummary = mm.io.render_summary(
+        summary,
+        formatters=mh.formatters,
+        namemap=mm.io.motchallenge_metric_names
+    )
+    print(strsummary)
+    Evaluator.save_summary(summary, os.path.join(
+        result_root, 'summary_{}.xlsx'.format(run_name)))
 
     seqmap_path = osp.join(data_root, 'seqmap.txt')
     if not osp.exists(seqmap_path):
