@@ -49,9 +49,9 @@ class ParallelFairmotEnv(BasicMotEnv):
             self._save_results(self.frame_id)
         else:
             done = True
-            results_file = osp.join(self.output_dir, f'{self.seq}.txt')
-            BasicMotEnv._write_results(self.results, results_file, 'mot')
-            BasicMotEnv._get_summary(self.evaluator, self.seq, results_file)
+            # results_file = osp.join(self.output_dir, f'{self.seq}.txt')
+            # BasicMotEnv._write_results(self.results, results_file, 'mot')
+            # BasicMotEnv._get_summary(self.evaluator, self.seq, results_file)
         return done
 
     def _get_obs(self, track):
@@ -153,11 +153,11 @@ class ParallelFairmotEnv(BasicMotEnv):
         '''
         reward = 0
         if 'SWITCH' in mm_types:
-            reward += -2
+            reward += -10
         else:
             reward += 1
-        if len(track.features) > 30:
-            reward += -1
+        # if len(track.features) > 30:
+        #     reward += -1
         return reward
 
     @BasicMotEnv.calc_fps

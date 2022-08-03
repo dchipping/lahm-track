@@ -7,7 +7,9 @@ register(id='BaseFairmotEnv-v0', entry_point='motgym.envs.FairMOT.base_fairmot_e
 register(id='Mot17ParallelEnv-v0', entry_point='motgym.envs.FairMOT.parallel_env:Mot17ParallelEnv')
 register(id='Mot20ParallelEnv-v0', entry_point='motgym.envs.FairMOT.parallel_env:Mot20ParallelEnv')
 register(id='Mot17SequentialEnvSeq02-v0', entry_point='motgym.envs.FairMOT.sequential_env:Mot17SequentialEnvSeq02')
+register(id='Mot17SequentialEnvSeq04-v0', entry_point='motgym.envs.FairMOT.sequential_env:Mot17SequentialEnvSeq04')
 register(id='Mot17SequentialEnvSeq05-v0', entry_point='motgym.envs.FairMOT.sequential_env:Mot17SequentialEnvSeq05')
+register(id='Mot17SequentialEnvSeq09-v0', entry_point='motgym.envs.FairMOT.sequential_env:Mot17SequentialEnvSeq09')
 
 def add_path(path):
     if path not in sys.path:

@@ -16,7 +16,7 @@ class BaseFairmotEnv(BasicMotEnv):
         0 - Ignore encoding
         1 - Add encoding to gallery
         '''
-        self.action_space = spaces.Discrete(3)
+        self.action_space = spaces.Discrete(2)
         '''
         Observation Space: [1., 1., 100., 1., 1., 1.]
         0. -> 1. - Detection confidence
@@ -27,9 +27,9 @@ class BaseFairmotEnv(BasicMotEnv):
         0. -> 1. - Avg Cosine Distnace Between Tracks
         '''
         self.observation_space = spaces.Box(
-            np.zeros((6,)), np.array([1, 1, 100, 1, 1, 1]), shape=(6,), dtype=float)
+            np.zeros((6,)), np.array([1, 1, 5000, 1, 1, 1]), shape=(6,), dtype=float)
         
-        self.tracker_args = opts().init(['mot'])
+        self.tracker_args = opts().init(['mot', '--batch_size=100'])
 
     def reset(self):
         return np.zeros((6,))

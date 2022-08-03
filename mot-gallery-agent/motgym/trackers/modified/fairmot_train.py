@@ -73,9 +73,8 @@ class AgentSTrack(BaseTrack):
             self.features.append(feat)
         elif action == -1:
             self.prune_similar()
-        self.curr_feat = feat /np.linalg.norm(feat)
 
-        # Recalculate gallery each update
+        # Recalculate gallery each update same as baseline FairMOT
         self.smooth_feat = None # Reset smooth_feature
         for i, feat in enumerate(self.features):
             if self.smooth_feat is None:
@@ -96,6 +95,7 @@ class AgentSTrack(BaseTrack):
 
     def agent_update_features(self, feat, obs):
         '''New method added for RL agent to manage gallery'''
+        self.curr_feat = feat
         if self.agent:
             action = self.agent.compute_single_action(obs)
             self.update_gallery(action, feat)
@@ -449,8 +449,8 @@ def custom_embedding_distance(tracks, detections, metric='cosine'):
         if track.features:
             gallery_cost_matrix = cdist(np.asarray(track.features), det_features, metric)
             gallery_idx, _ = np.unravel_index(np.argmin(gallery_cost_matrix), gallery_cost_matrix.shape)
-            feat = np.linalg.norm(track.features[gallery_idx])
-            track.smooth_feat = feat/np.linalg.norm(feat)
+            track.smooth_feat = track.features[gallery_idx]
+            track.smooth_feat /= np.linalg.norm(track.smooth_feat)
 
     track_features = np.asarray(
         [track.smooth_feat for track in tracks], dtype=np.float)
