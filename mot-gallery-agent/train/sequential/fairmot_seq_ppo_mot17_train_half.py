@@ -1,4 +1,5 @@
 import datetime as dt
+import os
 import os.path as osp
 from pathlib import Path
 
@@ -26,12 +27,11 @@ config = {
     "framework": "torch",
     "num_gpus": 1,
     "num_workers": 7,  # num_workers = Number of similtaneous trials occuring
-    "env": "motgym:Mot17SequentialEnvSeq05-v0",
     "recreate_failed_workers": True,  # For extra stability
 }
 
 stop = {
-    "training_iterations": 10
+    "training_iteration": 10
 }
 
 # Run MOT17-05 training
@@ -45,7 +45,7 @@ mot17_05_results = tune.run("PPO",
                             restore=checkpoint_path,
                             checkpoint_freq=5,
                             checkpoint_at_end=True)
-checkpoint_path = osp.join(results_dir, run_name, mot17_05_results.trial_name)
+checkpoint_path = mot17_05_results.get_last_checkpoint().local_path
 
 # Run MOT17-02 training
 mot17_02_config = config.copy()
@@ -58,4 +58,36 @@ mot17_02_results = tune.run("PPO",
                             restore=checkpoint_path,
                             checkpoint_freq=5,
                             checkpoint_at_end=True)
-checkpoint_path = osp.join(results_dir, run_name, mot17_02_results.trial_name)
+checkpoint_path = mot17_02_results.get_last_checkpoint().local_path
+
+# Run MOT17-04 training
+mot17_04_config = config.copy()
+mot17_04_config["env"] = "motgym:Mot17SequentialEnvSeq04-v0"
+mot17_04_results = tune.run("PPO",
+                            config=mot17_04_config,
+                            name=run_name,
+                            local_dir=results_dir,
+                            stop=stop,
+                            restore=checkpoint_path,
+                            checkpoint_freq=5,
+                            checkpoint_at_end=True)
+checkpoint_path = mot17_04_results.get_last_checkpoint().local_path
+
+# Run MOT17-09 training
+mot17_09_config = config.copy()
+mot17_09_config["env"] = "motgym:Mot17SequentialEnvSeq04-v0"
+mot17_09_results = tune.run("PPO",
+                            config=mot17_09_config,
+                            name=run_name,
+                            local_dir=results_dir,
+                            stop=stop,
+                            restore=checkpoint_path,
+                            checkpoint_freq=5,
+                            checkpoint_at_end=True)
+
+# Make checkpoint accessible for inference and benchmarking
+src = mot17_09_results.get_last_checkpoint()
+dest = osp.join(results_dir, run_name, 'checkpoint')
+os.symlink(src, dest)
+os.symlink(src + '.tune_metadata', dest + '.tune_metadata')
+print(f'Final MOT17 results saved to: {dest}')

@@ -18,7 +18,7 @@ from utils.post_process import ctdet_post_process
 class RandomAgent:
     @staticmethod
     def compute_single_action(obs):
-        return random.randint(0,1)
+        return random.randint(0, 1)
 
 
 class GreedyAgent:
@@ -56,8 +56,8 @@ class AgentJDETracker(TrainAgentJDETracker):
         self.lookup_gallery = lookup_gallery
 
         self.agent = self.build_agent(agent_path)
-        BaseTrack._count = 0 ## THIS IS A HACK, CAN WE EXPORT PYTORCH WEIGHTS
-        ## AND USE INDEPENDENTLY OF RESETTING ENV AND CAUSING COUNT TO GO UP?
+        BaseTrack._count = 0  # THIS IS A HACK, CAN WE EXPORT PYTORCH WEIGHTS
+        # AND USE INDEPENDENTLY OF RESETTING ENV AND CAUSING COUNT TO GO UP?
 
     def build_agent(self, agent_path):
         if not agent_path:
@@ -66,18 +66,21 @@ class AgentJDETracker(TrainAgentJDETracker):
             return GreedyAgent()
         elif agent_path == 'random':
             return RandomAgent()
-        elif 'DQN' in agent_path:
+        elif 'dqn' in agent_path:
             config = dqn.DEFAULT_CONFIG.copy()
             config["framework"] = "torch"
-            trainer = dqn.DQNTrainer(config=config, env="motgym:BaseFairmotEnv-v0")
-        elif 'PPO' in agent_path:
+            trainer = dqn.DQNTrainer(
+                config=config, env="motgym:BaseFairmotEnv-v0")
+        elif 'ppo' in agent_path:
             config = ppo.DEFAULT_CONFIG.copy()
             config["framework"] = "torch"
-            trainer = ppo.PPOTrainer(config=config, env="motgym:BaseFairmotEnv-v0")
-        elif 'IMPALA' in agent_path:
+            trainer = ppo.PPOTrainer(
+                config=config, env="motgym:BaseFairmotEnv-v0")
+        elif 'impala' in agent_path:
             config = impala.DEFAULT_CONFIG.copy()
             config["framework"] = "torch"
-            trainer = impala.ImpalaTrainer(config=config, env="motgym:BaseFairmotEnv-v0")
+            trainer = impala.ImpalaTrainer(
+                config=config, env="motgym:BaseFairmotEnv-v0")
         trainer.restore(agent_path)
         return trainer
 
@@ -114,7 +117,7 @@ class AgentJDETracker(TrainAgentJDETracker):
         lost_stracks = []
         removed_stracks = []
 
-        width = img0.shape[1]   
+        width = img0.shape[1]
         height = img0.shape[0]
         inp_height = im_blob.shape[2]
         inp_width = im_blob.shape[3]
@@ -133,7 +136,8 @@ class AgentJDETracker(TrainAgentJDETracker):
             id_feature = F.normalize(id_feature, dim=1)
 
             reg = output['reg'] if self.opt.reg_offset else None
-            dets, inds = mot_decode(hm, wh, reg=reg, ltrb=self.opt.ltrb, K=self.opt.K)
+            dets, inds = mot_decode(
+                hm, wh, reg=reg, ltrb=self.opt.ltrb, K=self.opt.K)
             id_feature = _tranpose_and_gather_feat(id_feature, inds)
             id_feature = id_feature.squeeze(0)
             id_feature = id_feature.cpu().numpy()
@@ -152,10 +156,10 @@ class AgentJDETracker(TrainAgentJDETracker):
         if len(dets) > 0:
             '''Detections'''
             detections = [AgentSTrack(AgentSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f, min_iou_score, agent=self.agent)
-                    for (tlbrs, f, min_iou_score) in zip(dets[:, :5], id_feature, min_iou_scores)]
+                          for (tlbrs, f, min_iou_score) in zip(dets[:, :5], id_feature, min_iou_scores)]
         else:
             detections = []
-            
+
         ''' Add newly detected tracklets to tracked_stracks'''
         unconfirmed = []
         tracked_stracks = []  # type: list[STrack]
@@ -168,16 +172,18 @@ class AgentJDETracker(TrainAgentJDETracker):
         ''' Step 2: First association, with embedding'''
         strack_pool = joint_stracks(tracked_stracks, self.lost_stracks)
         # Predict the current location with KF
-        #for strack in strack_pool:
-            #strack.predict()
+        # for strack in strack_pool:
+        # strack.predict()
         AgentSTrack.multi_predict(strack_pool)
         if self.lookup_gallery:
             dists = custom_embedding_distance(strack_pool, detections)
         else:
             dists = matching.embedding_distance(strack_pool, detections)
-        # dists = matching.iou_distance(strack_pool, detections)        
-        dists = matching.fuse_motion(self.kalman_filter, dists, strack_pool, detections)
-        matches, u_track, u_detection = matching.linear_assignment(dists, thresh=0.4)
+        # dists = matching.iou_distance(strack_pool, detections)
+        dists = matching.fuse_motion(
+            self.kalman_filter, dists, strack_pool, detections)
+        matches, u_track, u_detection = matching.linear_assignment(
+            dists, thresh=0.4)
 
         for itracked, idet in matches:
             track = strack_pool[itracked]
@@ -191,9 +197,11 @@ class AgentJDETracker(TrainAgentJDETracker):
 
         ''' Step 3: Second association, with IOU'''
         detections = [detections[i] for i in u_detection]
-        r_tracked_stracks = [strack_pool[i] for i in u_track if strack_pool[i].state == TrackState.Tracked]
+        r_tracked_stracks = [strack_pool[i]
+                             for i in u_track if strack_pool[i].state == TrackState.Tracked]
         dists = matching.iou_distance(r_tracked_stracks, detections)
-        matches, u_track, u_detection = matching.linear_assignment(dists, thresh=0.5)
+        matches, u_track, u_detection = matching.linear_assignment(
+            dists, thresh=0.5)
 
         for itracked, idet in matches:
             track = r_tracked_stracks[itracked]
@@ -214,7 +222,8 @@ class AgentJDETracker(TrainAgentJDETracker):
         '''Deal with unconfirmed tracks, usually tracks with only one beginning frame'''
         detections = [detections[i] for i in u_detection]
         dists = matching.iou_distance(unconfirmed, detections)
-        matches, u_unconfirmed, u_detection = matching.linear_assignment(dists, thresh=0.7)
+        matches, u_unconfirmed, u_detection = matching.linear_assignment(
+            dists, thresh=0.7)
         for itracked, idet in matches:
             unconfirmed[itracked].update(detections[idet], self.frame_id)
             activated_starcks.append(unconfirmed[itracked])
@@ -238,20 +247,31 @@ class AgentJDETracker(TrainAgentJDETracker):
 
         # print('Ramained match {} s'.format(t4-t3))
 
-        self.tracked_stracks = [t for t in self.tracked_stracks if t.state == TrackState.Tracked]
-        self.tracked_stracks = joint_stracks(self.tracked_stracks, activated_starcks)
-        self.tracked_stracks = joint_stracks(self.tracked_stracks, refind_stracks)
-        self.lost_stracks = sub_stracks(self.lost_stracks, self.tracked_stracks)
+        self.tracked_stracks = [
+            t for t in self.tracked_stracks if t.state == TrackState.Tracked]
+        self.tracked_stracks = joint_stracks(
+            self.tracked_stracks, activated_starcks)
+        self.tracked_stracks = joint_stracks(
+            self.tracked_stracks, refind_stracks)
+        self.lost_stracks = sub_stracks(
+            self.lost_stracks, self.tracked_stracks)
         self.lost_stracks.extend(lost_stracks)
-        self.lost_stracks = sub_stracks(self.lost_stracks, self.removed_stracks)
+        self.lost_stracks = sub_stracks(
+            self.lost_stracks, self.removed_stracks)
         self.removed_stracks.extend(removed_stracks)
-        self.tracked_stracks, self.lost_stracks = remove_duplicate_stracks(self.tracked_stracks, self.lost_stracks)
-        output_stracks = [track for track in self.tracked_stracks if track.is_activated]
+        self.tracked_stracks, self.lost_stracks = remove_duplicate_stracks(
+            self.tracked_stracks, self.lost_stracks)
+        output_stracks = [
+            track for track in self.tracked_stracks if track.is_activated]
 
         logger.debug('===========Frame {}=========='.format(self.frame_id))
-        logger.debug('Activated: {}'.format([track.track_id for track in activated_starcks]))
-        logger.debug('Refind: {}'.format([track.track_id for track in refind_stracks]))
-        logger.debug('Lost: {}'.format([track.track_id for track in lost_stracks]))
-        logger.debug('Removed: {}'.format([track.track_id for track in removed_stracks]))
+        logger.debug('Activated: {}'.format(
+            [track.track_id for track in activated_starcks]))
+        logger.debug('Refind: {}'.format(
+            [track.track_id for track in refind_stracks]))
+        logger.debug('Lost: {}'.format(
+            [track.track_id for track in lost_stracks]))
+        logger.debug('Removed: {}'.format(
+            [track.track_id for track in removed_stracks]))
 
         return output_stracks

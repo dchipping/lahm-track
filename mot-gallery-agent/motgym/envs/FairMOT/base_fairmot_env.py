@@ -29,7 +29,7 @@ class BaseFairmotEnv(BasicMotEnv):
         self.observation_space = spaces.Box(
             np.zeros((6,)), np.array([1, 1, 5000, 1, 1, 1]), shape=(6,), dtype=float)
         
-        self.tracker_args = opts().init(['mot', '--batch_size=100'])
+        self.tracker_args = opts().init(['mot'])#, '--batch_size=100'])
 
     def reset(self):
         return np.zeros((6,))
