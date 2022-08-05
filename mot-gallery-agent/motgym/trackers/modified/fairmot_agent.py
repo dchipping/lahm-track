@@ -28,7 +28,7 @@ class GreedyAgent:
 
 
 class AgentJDETracker(TrainAgentJDETracker):
-    def __init__(self, opt, frame_rate=30, lookup_gallery=False, agent_path=None):
+    def __init__(self, opt, frame_rate=30, lookup_gallery=0, agent_path=None):
         self.opt = opt
         if opt.gpus[0] >= 0:
             opt.device = torch.device('cuda')
@@ -176,7 +176,8 @@ class AgentJDETracker(TrainAgentJDETracker):
         # strack.predict()
         AgentSTrack.multi_predict(strack_pool)
         if self.lookup_gallery:
-            dists = custom_embedding_distance(strack_pool, detections)
+            dists = custom_embedding_distance(
+                self.lookup_gallery, strack_pool, detections)
         else:
             dists = matching.embedding_distance(strack_pool, detections)
         # dists = matching.iou_distance(strack_pool, detections)

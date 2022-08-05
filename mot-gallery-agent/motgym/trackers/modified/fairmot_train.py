@@ -20,7 +20,7 @@ class AgentSTrack(BaseTrack):
         self.is_activated = False
         self.tracklet_len = 0
 
-        self.agent = agent # If this is None gallery will be frozen
+        self.agent = agent  # If this is None gallery will be frozen
 
         self.score = score
         self.min_iou_score = min_iou_score
@@ -75,13 +75,14 @@ class AgentSTrack(BaseTrack):
             self.prune_similar()
 
         # Recalculate gallery each update same as baseline FairMOT
-        self.smooth_feat = None # Reset smooth_feature
+        self.smooth_feat = None  # Reset smooth_feature
         for i, feat in enumerate(self.features):
             if self.smooth_feat is None:
                 self.smooth_feat = feat
             else:
                 feat /= np.linalg.norm(feat)
-                self.smooth_feat = self.alpha * self.smooth_feat + (1 - self.alpha) * feat
+                self.smooth_feat = self.alpha * \
+                    self.smooth_feat + (1 - self.alpha) * feat
             self.smooth_feat /= np.linalg.norm(self.smooth_feat)
 
     def prune_similar(self):
@@ -236,7 +237,7 @@ class AgentSTrack(BaseTrack):
 
 
 class TrainAgentJDETracker():
-    def __init__(self, opt, frame_rate=30, lookup_gallery=False):
+    def __init__(self, opt, frame_rate=30, lookup_gallery=0):
         self.opt = opt
         self.tracked_stracks = []  # type: list[STrack]
         self.lost_stracks = []  # type: list[STrack]
@@ -274,7 +275,7 @@ class TrainAgentJDETracker():
         if len(dets) > 0:
             '''Detections'''
             detections = [AgentSTrack(AgentSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f, min_iou_score, agent=None)
-                             for (tlbrs, f, min_iou_score) in zip(dets[:, :5], id_feature, min_iou_scores)]
+                          for (tlbrs, f, min_iou_score) in zip(dets[:, :5], id_feature, min_iou_scores)]
         else:
             detections = []
 
@@ -294,7 +295,8 @@ class TrainAgentJDETracker():
         # strack.predict()
         AgentSTrack.multi_predict(strack_pool)
         if self.lookup_gallery:
-            dists = custom_embedding_distance(strack_pool, detections)
+            dists = custom_embedding_distance(
+                self.lookup_gallery, strack_pool, detections)
         else:
             dists = matching.embedding_distance(strack_pool, detections)
         #dists = matching.iou_distance(strack_pool, detections)
@@ -430,32 +432,56 @@ def remove_duplicate_stracks(stracksa, stracksb):
     return resa, resb
 
 
-def custom_embedding_distance(tracks, detections, metric='cosine'):
+def custom_embedding_distance(n, tracks, detections, metric='cosine'):
     """
     :param tracks: list[STrack]
     :param detections: list[BaseTrack]
     :param metric:
     :return: cost_matrix np.ndarray
     """
-
     cost_matrix = np.zeros((len(tracks), len(detections)), dtype=np.float)
     if cost_matrix.size == 0:
         return cost_matrix
     det_features = np.asarray(
         [track.curr_feat for track in detections], dtype=np.float)
 
-    # Pick min from gallery as smooth_feat (in place of moving average)
+    # Pick n min from gallery as smooth_feat (in place of moving average)
+    num_dets = len(detections)
+    track_features = [] # (num_tracks, num_dets, 128)
     for i, track in enumerate(tracks):
         if track.features:
-            gallery_cost_matrix = cdist(np.asarray(track.features), det_features, metric)
-            gallery_idx, _ = np.unravel_index(np.argmin(gallery_cost_matrix), gallery_cost_matrix.shape)
-            track.smooth_feat = track.features[gallery_idx]
-            track.smooth_feat /= np.linalg.norm(track.smooth_feat)
+            feats = np.asarray(track.features)
 
-    track_features = np.asarray(
-        [track.smooth_feat for track in tracks], dtype=np.float)
-    cost_matrix = np.maximum(0.0, cdist(
-        track_features, det_features, metric))  # Nomalized features
+            # If gallery is larger than n, take best n features
+            if len(track.features) > n:
+                gallery_cost_matrix = cdist(feats, det_features, metric)
+                min_row_idxs = np.argpartition(
+                    gallery_cost_matrix, n, axis=0)[:n].T
+                assert min_row_idxs.shape == (num_dets, n)
+
+                # Best averaged track feature for each detection
+                smooth_feat_vs_det = np.empty(
+                    (num_dets, 128))  # (num_dets, 128)
+                for det_n in range(num_dets):
+                    best_n_feats = feats[min_row_idxs[det_n], :]  # (n, 128)
+                    smooth_feat = np.average(best_n_feats, axis=0)  # (128,)
+                    smooth_feat_vs_det[det_n, :] = smooth_feat
+            else:
+                smooth_feat = np.average(feats, axis=0)
+                smooth_feat_vs_det = np.tile(smooth_feat, (num_dets, 1))
+
+            track_features.append(smooth_feat_vs_det)
+
+    for det_n in range(num_dets):
+        track_features_vs_det = []
+        for track_n in range(len(tracks)):
+            feat = track_features[track_n][det_n]
+            track_features_vs_det.append(feat)
+
+        cost_col = cdist(track_features_vs_det, [det_features[det_n]], metric)
+        cost_matrix[:, det_n] = cost_col.flatten()
+
+    cost_matrix = np.maximum(0.0, cost_matrix) # Nomalized features
     return cost_matrix
 
 
@@ -465,8 +491,10 @@ def get_min_iou_scores(dets):
     min_iou_scores = []
     n_dets = dets.shape[0]
     for idx in range(n_dets):
-        mask = np.ones((n_dets,), dtype=bool); mask[idx] = False
+        mask = np.ones((n_dets,), dtype=bool)
+        mask[idx] = False
         neighbours_dets = dets[mask, :]
-        ious = matching.iou_distance(np.expand_dims(dets[idx, :], axis=0), neighbours_dets)
+        ious = matching.iou_distance(np.expand_dims(
+            dets[idx, :], axis=0), neighbours_dets)
         min_iou_scores.append(np.min(ious))
     return min_iou_scores
