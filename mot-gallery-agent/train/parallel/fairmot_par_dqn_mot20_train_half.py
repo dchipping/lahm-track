@@ -7,7 +7,7 @@ import gym
 from ray import rllib, tune
 
 RUN_NAME = ''
-RESULTS_DIR = ''  # tensorboard --logdir $RESULTS_DIR
+RESULTS_DIR = ''  # tensorboard --logdir $RESULTS_DIR (pip install tensorboard)
 INITIAL_CHECKPOINT = ''
 NUM_LOOPS = 5
 NUM_CORES = 7
@@ -22,7 +22,7 @@ run_name = RUN_NAME if RUN_NAME else dt.datetime.now().strftime("%Y-%m-%dT%H-%M-
 checkpoint_path = INITIAL_CHECKPOINT if INITIAL_CHECKPOINT else None
 
 # Check env is valid
-env = gym.make("motgym:Mot17SequentialEnv-v0")
+env = gym.make("motgym:Mot20ParallelEnv-v0")
 rllib.utils.check_env(env)
 
 # Default config and stoping criteria, see useful scaling guide:
@@ -32,15 +32,15 @@ config = {
     "num_gpus": NUM_GPUS,
     "num_workers": NUM_CORES - 1,  # num_workers = Number of similtaneous trials occuring
     "recreate_failed_workers": True,  # For extra stability
-    "env": "motgym:Mot17SequentialEnvSeq-v0"
+    "env": "motgym:Mot20ParallelEnv-v0"
 }
 
 stop = {
     # "training_iteration": 1000
 }
 
-# Run MOT17 training
-results = tune.run("IMPALA",
+# Run MOT20 training
+results = tune.run("DQN",
                    config=config,
                    name=run_name,
                    local_dir=results_dir,

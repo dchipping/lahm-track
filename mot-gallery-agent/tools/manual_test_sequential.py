@@ -3,13 +3,18 @@ import random
 import gym
 import time
 
+# Dev Envs
+from motgym.envs.FairMOT.dev_sequential_env import *
+
 
 def run_sequential_env(greedy=False, target_idx=None, analyse=False):
-    env = gym.make("motgym:Mot17SequentialEnvSeq05-v0")
+    # env = gym.make("motgym:Mot17SequentialEnvSeq05-v0")
+    env = MotSynthParallelEnv()
 
     # Option to fix target for repeat comparison
-    if target_idx: env.assign_target(target_idx)
-    print(env.focus_tid)
+    if target_idx:
+        env.assign_target(target_idx)
+    print(env.viable_tids, len(env.viable_tids))
 
     env.reset()
     env.render()
@@ -20,12 +25,12 @@ def run_sequential_env(greedy=False, target_idx=None, analyse=False):
         obs, reward, done, info = env.step(action)
 
         # if info['curr_frame'] % 10 == 0:
-            # print(f"Frame: {info['curr_frame']}, TrackIDs: {info['curr_track']}")
-        
+        print(f"Frame: {info['curr_frame']}, TrackIDs: {info['curr_track']}")
+
         # Artificially slow down the rendering for anlaysis
         # time.sleep(0.1)
         env.render()
-        
+
     env.close()
     print(info["ep_reward"])
     return info["ep_reward"]
@@ -33,8 +38,8 @@ def run_sequential_env(greedy=False, target_idx=None, analyse=False):
 
 if __name__ == "__main__":
     # run_sequential_env(target_idx=18, greedy=True)
-    run_sequential_env(target_idx=6)
-    
+    run_sequential_env()
+
     # Variation test
     # results = defaultdict(set)
     # for i in range(1, 11):

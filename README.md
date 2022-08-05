@@ -6,7 +6,9 @@
 PRIORITY:
 - Reward function tweaks
 - Train experiment scripts
+
 - Averaging cosine distance lookup variation
+- Setup variants of experiment via branches
 
 TODO:
 - Train experiment scripts

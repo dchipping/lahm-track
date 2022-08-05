@@ -3,6 +3,8 @@ import os
 import os.path as osp
 from pathlib import Path
 
+from ray.rllib.env.multi_agent_env import make_multi_agent
+from ray.tune.registry import register_env
 import gym
 from ray import rllib, tune
 
@@ -22,25 +24,27 @@ run_name = RUN_NAME if RUN_NAME else dt.datetime.now().strftime("%Y-%m-%dT%H-%M-
 checkpoint_path = INITIAL_CHECKPOINT if INITIAL_CHECKPOINT else None
 
 # Check env is valid
-env = gym.make("motgym:Mot17SequentialEnv-v0")
+ma_env_cls = make_multi_agent("motgym:Mot20ParallelEnv-v0")
+register_env("multi_agent_parallel_mot20_env",
+             lambda _: ma_env_cls({"num_agents": NUM_CORES}))
+env = gym.make("multi_agent_parallel_mot20_env")
 rllib.utils.check_env(env)
 
 # Default config and stoping criteria, see useful scaling guide:
 # https://github.com/ray-project/ray/blob/master/doc/source/rllib/rllib-training.rst#scaling-guide
 config = {
     "framework": "torch",
-    "num_gpus": NUM_GPUS,
-    "num_workers": NUM_CORES - 1,  # num_workers = Number of similtaneous trials occuring
+    "num_gpus": NUM_GPUS,  # Important for DQNs
     "recreate_failed_workers": True,  # For extra stability
-    "env": "motgym:Mot17SequentialEnvSeq-v0"
+    "env": "multi_agent_parallel_mot20_env"
 }
 
 stop = {
     # "training_iteration": 1000
 }
 
-# Run MOT17 training
-results = tune.run("IMPALA",
+# Run MOT20 training
+results = tune.run("DQN",
                    config=config,
                    name=run_name,
                    local_dir=results_dir,

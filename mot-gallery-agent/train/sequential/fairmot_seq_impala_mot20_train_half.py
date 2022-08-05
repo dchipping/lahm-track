@@ -22,7 +22,7 @@ run_name = RUN_NAME if RUN_NAME else dt.datetime.now().strftime("%Y-%m-%dT%H-%M-
 checkpoint_path = INITIAL_CHECKPOINT if INITIAL_CHECKPOINT else None
 
 # Check env is valid
-env = gym.make("motgym:Mot17SequentialEnv-v0")
+env = gym.make("motgym:Mot20SequentialEnv-v0")
 rllib.utils.check_env(env)
 
 # Default config and stoping criteria, see useful scaling guide:
@@ -32,14 +32,14 @@ config = {
     "num_gpus": NUM_GPUS,
     "num_workers": NUM_CORES - 1,  # num_workers = Number of similtaneous trials occuring
     "recreate_failed_workers": True,  # For extra stability
-    "env": "motgym:Mot17SequentialEnvSeq-v0"
+    "env": "motgym:Mot20SequentialEnvSeq-v0"
 }
 
 stop = {
     # "training_iteration": 1000
 }
 
-# Run MOT17 training
+# Run MOT20 training
 results = tune.run("IMPALA",
                    config=config,
                    name=run_name,
