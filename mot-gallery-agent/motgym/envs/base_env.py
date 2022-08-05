@@ -27,7 +27,7 @@ class BasicMotEnv(gym.Env):
         self.gym_path = BasicMotEnv._get_gym_path()
         self.data_dir = osp.join(self.gym_path, 'datasets', dataset)
         self.dets_dir = osp.join(self.gym_path, 'detections', detections)
-        self.output_dir = BasicMotEnv._set_output_dir(self.gym_path)
+        # self.output_dir = BasicMotEnv._set_output_dir(self.gym_path)
         self.seqs = os.listdir(self.data_dir)
 
         self.tracker_args = None

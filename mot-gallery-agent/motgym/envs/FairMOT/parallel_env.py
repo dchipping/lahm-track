@@ -9,14 +9,12 @@ from modified.fairmot_train import TrainAgentJDETracker as Tracker
 from opts import opts
 from tracker.basetrack import BaseTrack
 
-from ..base_env import BasicMotEnv
+from .base_fairmot_env import BaseFairmotEnv
 
 
-class ParallelFairmotEnv(BasicMotEnv):
+class ParallelFairmotEnv(BaseFairmotEnv):
     def __init__(self, dataset, detections):
         super().__init__(dataset, detections)
-
-        self.tracker_args = opts().init(['mot'])
 
     def _track_update(self, frame_id):
         dets = self.detections[str(frame_id)]
@@ -49,9 +47,9 @@ class ParallelFairmotEnv(BasicMotEnv):
             self._save_results(self.frame_id)
         else:
             done = True
-            results_file = osp.join(self.output_dir, f'{self.seq}.txt')
-            BasicMotEnv._write_results(self.results, results_file, 'mot')
-            BasicMotEnv._get_summary(self.evaluator, self.seq, results_file)
+            # results_file = osp.join(self.output_dir, f'{self.seq}.txt')
+            # BasicMotEnv._write_results(self.results, results_file, 'mot')
+            # BasicMotEnv._get_summary(self.evaluator, self.seq, results_file)
         return done
 
     def _get_obs(self, track):
@@ -88,7 +86,8 @@ class ParallelFairmotEnv(BasicMotEnv):
         # Only release loop once the first track(s) confirmed
         while not self.online_targets:
             done = self._step_frame()
-            if done: raise Exception('Sequence too short')
+            if done:
+                raise Exception('Sequence too short')
 
         track = self.online_targets[self.track_idx]
         obs = self._get_obs(track)
@@ -106,7 +105,7 @@ class ParallelFairmotEnv(BasicMotEnv):
                 track_result = (tuple(tlwh), tid, ts)
                 results_dict[frame_id].append(track_result)
 
-    def _evaluate(self, track_id, eval_frame_id): # TODO: Curr limited to k -> k+1
+    def _evaluate(self, track_id, eval_frame_id):  # TODO: Curr limited to k -> k+1
         results = {}
         self._add_results(results, self.frame_id, self.online_targets)
 
@@ -153,14 +152,14 @@ class ParallelFairmotEnv(BasicMotEnv):
         '''
         reward = 0
         if 'SWITCH' in mm_types:
-            reward += -2
+            reward += -10
         else:
             reward += 1
-        if len(track.features) > 30:
-            reward += -1
+        # if len(track.features) > 30:
+        #     reward += -1
         return reward
 
-    @BasicMotEnv.calc_fps
+    @BaseFairmotEnv.calc_fps
     def step(self, action):
         '''Parallel env flow see env-data-flow.png for design'''
         # Take action
@@ -170,7 +169,7 @@ class ParallelFairmotEnv(BasicMotEnv):
         # Look to future to evaluate if successful action
         reward = 0
         if self.frame_id < self.seq_len:
-            step = self.frame_rate * 0.2 # How far into future to evaluate
+            step = self.frame_rate * 0.2  # How far into future to evaluate
             eval_frame_id = min(self.seq_len - 1, self.frame_id + step)
             mm_types = self._evaluate(track.track_id, eval_frame_id)
             reward = self._generate_reward(track, mm_types)
@@ -201,7 +200,8 @@ class ParallelFairmotEnv(BasicMotEnv):
             text = str(track.track_id)
             bbox = track.tlwh
             is_curr_track = (track == curr_track)
-            BasicMotEnv._visualize_box(img0, text, bbox, track.track_id, is_curr_track)
+            self._visualize_box(
+                img0, text, bbox, track.track_id, is_curr_track)
 
         track_id = self.online_targets[self.track_idx].track_id
         self._display_frame(img0, track_id)

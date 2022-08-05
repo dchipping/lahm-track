@@ -95,10 +95,13 @@ def eval_seq(opt, dataloader, data_type, result_filename, show_image=True,
 
 
 def main(opt, data_root='/data/MOT16/train', seqs=('MOT16-05',), exp_name='demo',
-         show_image=True, lookup_gallery=False, agent_path=None, run_name=None):
+         show_image=True, lookup_gallery=False, agent_path=None, run_name=None,
+         results_dir=None):
     logger.setLevel(logging.INFO)
     run_name = run_name if run_name else dt.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     result_root = os.path.join(os.getcwd(), 'results', exp_name, run_name)
+    if results_dir:
+        result_root = os.path.join(results_dir, exp_name, run_name)
     mkdir_if_missing(result_root)
     data_type = 'mot'
 

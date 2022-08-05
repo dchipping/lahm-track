@@ -10,6 +10,8 @@
 	url = https://github.com/ifzhang/FairMOT.git
 	ignore = dirty
 
+# Add new trackers to framework by adding gitmodule
+# git submodule add <git-repo> <path>
 # [submodule "deep_sort"]
 # 	path = mot-gallery-agent/motgym/trackers/deep_sort
 # 	url = https://github.com/nwojke/deep_sort.git
