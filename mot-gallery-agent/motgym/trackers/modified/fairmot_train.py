@@ -50,19 +50,19 @@ class AgentSTrack(BaseTrack):
         return average_dist
 
     def get_observation(self, feat, score, min_iou_score):
-        similarity = self.gallery_similarity(feat)
+        # similarity = self.gallery_similarity(feat)
         average = 0.
         if self.features:
-            gallery_avg = np.average(self.features, axis=0)
-            average = cdist([gallery_avg], [feat], 'cosine').item()
-        average_dist = self.average_gallery_distance()
+            # gallery_avg = np.average(self.features, axis=0)
+            average = cdist([self.smooth_feat], [feat], 'cosine').item()
+        # average_dist = self.average_gallery_distance()
         return np.array([
             score,
-            similarity,
+            # similarity,
             len(self.features),
             min_iou_score,
             average,
-            average_dist
+            # average_dist
         ], dtype=float)
 
     def update_gallery(self, action, feat):
@@ -447,7 +447,7 @@ def custom_embedding_distance(n, tracks, detections, metric='cosine'):
 
     # Pick n min from gallery as smooth_feat (in place of moving average)
     num_dets = len(detections)
-    track_features = [] # (num_tracks, num_dets, 128)
+    track_features = []  # (num_tracks, num_dets, 128)
     for i, track in enumerate(tracks):
         if track.features:
             feats = np.asarray(track.features)
@@ -481,7 +481,7 @@ def custom_embedding_distance(n, tracks, detections, metric='cosine'):
         cost_col = cdist(track_features_vs_det, [det_features[det_n]], metric)
         cost_matrix[:, det_n] = cost_col.flatten()
 
-    cost_matrix = np.maximum(0.0, cost_matrix) # Nomalized features
+    cost_matrix = np.maximum(0.0, cost_matrix)  # Nomalized features
     return cost_matrix
 
 

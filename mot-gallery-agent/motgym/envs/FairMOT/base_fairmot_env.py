@@ -27,17 +27,17 @@ class BaseFairmotEnv(BasicMotEnv):
         0. -> 1. - Avg Cosine Distnace Between Tracks
         '''
         self.observation_space = spaces.Box(
-            np.zeros((6,)), np.array([1, 1, 5000, 1, 1, 1]), shape=(6,), dtype=float)
+            np.zeros((4,)), np.array([1, 5000, 1, 1]), shape=(4,), dtype=float)
 
         buffer_size = 500  # Tracks are 'never' lost during training!
         self.tracker_args = opts().init(
             ['mot', f'--track_buffer={buffer_size}'])
 
     def reset(self):
-        return np.zeros((6,))
+        return np.zeros((4,))
 
     def step(self, action):
-        return np.zeros((6,)), 1, True, {}
+        return np.zeros((4,)), 1, True, {}
 
 
 if __name__ == "__main__":
