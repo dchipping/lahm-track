@@ -1,4 +1,4 @@
-# If datasets are stored in a different location
+# If detections are stored in a different location
 # create a symbolic link to emulate a local folder
 #
 # Usage:

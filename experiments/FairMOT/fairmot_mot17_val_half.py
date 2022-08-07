@@ -7,13 +7,13 @@ RESULTS_DIR = ''
 
 conf_thres = 0.4
 opt = opts().init(['mot', f'--load_model={MODEL_PATH}', f'--data_dir={DATA_DIR}',
-                   f'--conf_thres={conf_thres}'])  # , '--batch_size=100'])
+                   f'--conf_thres={conf_thres}'])  # , '--buffer_size=100'])
 seqs = sorted(filter(lambda x: not '.txt' in x, os.listdir(DATA_DIR)))
 
 main(opt,
      data_root=DATA_DIR,
      seqs=seqs,
      exp_name=Path(__file__).stem,
-     #  run_name='batch_size_100',
-     show_image=False,
+     #  run_name='buffer_size_100',
+     show_image=True,
      agent_path='greedy')

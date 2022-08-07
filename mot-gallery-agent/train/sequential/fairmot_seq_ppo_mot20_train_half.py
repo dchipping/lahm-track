@@ -32,7 +32,7 @@ config = {
     "num_gpus": NUM_GPUS,
     "num_workers": NUM_CORES - 1,  # num_workers = Number of similtaneous trials occuring
     "recreate_failed_workers": True,  # For extra stability
-    "env": "motgym:Mot20SequentialEnvSeq-v0"
+    "env": "motgym:Mot20SequentialEnv-v0"
 }
 
 stop = {

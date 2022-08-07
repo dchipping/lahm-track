@@ -7,14 +7,14 @@ RESULTS_DIR = ''
 
 conf_thres = 0.4
 opt = opts().init(['mot', f'--load_model={MODEL_PATH}', f'--data_dir={DATA_DIR}',
-                    f'--conf_thres={conf_thres}'])
+                   f'--conf_thres={conf_thres}'])
 seqs = sorted(filter(lambda x: not '.txt' in x, os.listdir(DATA_DIR)))
 
 main(opt,
-    data_root=DATA_DIR,
-    seqs=seqs,
-    exp_name=Path(__file__).stem,
-    show_image=False,
-    # results_dir=RESULTS_DIR,
-    lookup_gallery=True,
-    agent_path='greedy')
+     data_root=DATA_DIR,
+     seqs=seqs,
+     exp_name=Path(__file__).stem,
+     show_image=False,
+     # results_dir=RESULTS_DIR,
+     lookup_gallery=5,
+     agent_path='greedy')

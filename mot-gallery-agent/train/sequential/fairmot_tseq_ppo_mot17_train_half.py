@@ -35,7 +35,7 @@ config = {
 }
 
 stop = {
-    "training_iteration": 100
+    "training_iteration": 10000
 }
 
 # Run loop n number of times
@@ -49,7 +49,7 @@ for _ in range(NUM_LOOPS):
                                 local_dir=results_dir,
                                 stop=stop,
                                 restore=checkpoint_path,
-                                checkpoint_freq=20,
+                                checkpoint_freq=500,
                                 checkpoint_at_end=True)
     checkpoint_path = mot17_05_results.get_last_checkpoint().local_path
 
@@ -62,7 +62,7 @@ for _ in range(NUM_LOOPS):
                                 local_dir=results_dir,
                                 stop=stop,
                                 restore=checkpoint_path,
-                                checkpoint_freq=20,
+                                checkpoint_freq=500,
                                 checkpoint_at_end=True)
     checkpoint_path = mot17_02_results.get_last_checkpoint().local_path
 
@@ -75,7 +75,7 @@ for _ in range(NUM_LOOPS):
                                 local_dir=results_dir,
                                 stop=stop,
                                 restore=checkpoint_path,
-                                checkpoint_freq=20,
+                                checkpoint_freq=500,
                                 checkpoint_at_end=True)
     checkpoint_path = mot17_04_results.get_last_checkpoint().local_path
 
@@ -88,7 +88,7 @@ for _ in range(NUM_LOOPS):
                                 local_dir=results_dir,
                                 stop=stop,
                                 restore=checkpoint_path,
-                                checkpoint_freq=20,
+                                checkpoint_freq=500,
                                 checkpoint_at_end=True)
     checkpoint_path = mot17_09_results.get_last_checkpoint().local_path
 

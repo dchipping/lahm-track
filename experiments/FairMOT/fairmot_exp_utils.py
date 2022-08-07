@@ -1,3 +1,4 @@
+from TrackEval import trackeval
 import datetime as dt
 import logging
 import os
@@ -24,7 +25,6 @@ from tracking_utils.utils import mkdir_if_missing
 path = os.path.join(os.getcwd(), 'tools')
 if path not in sys.path:
     sys.path.insert(0, path)
-from TrackEval import trackeval
 
 
 def write_results(filename, results, data_type):
@@ -51,7 +51,7 @@ def write_results(filename, results, data_type):
 
 
 def eval_seq(opt, dataloader, data_type, result_filename, show_image=True,
-             frame_rate=30, use_cuda=True, lookup_gallery=False, agent_path=None):
+             frame_rate=30, use_cuda=True, lookup_gallery=0, agent_path=None):
     tracker = AgentJDETracker(opt, frame_rate=frame_rate,
                               lookup_gallery=lookup_gallery, agent_path=agent_path)
     timer = Timer()
@@ -95,7 +95,7 @@ def eval_seq(opt, dataloader, data_type, result_filename, show_image=True,
 
 
 def main(opt, data_root='/data/MOT16/train', seqs=('MOT16-05',), exp_name='demo',
-         show_image=True, lookup_gallery=False, agent_path=None, run_name=None,
+         show_image=True, lookup_gallery=0, agent_path=None, run_name=None,
          results_dir=None):
     logger.setLevel(logging.INFO)
     run_name = run_name if run_name else dt.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")

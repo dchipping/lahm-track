@@ -1,22 +1,23 @@
-## MOT MSc Project
+# Reinforcement Learning Appearance History Management for Visual Multi-Object Tracking
 
 - Tools for benchmarking and visualising tracking
-- Includes mot-gallery-agent
+- Includes mot-gallery-agent for training RL apperance management agent
 
-PRIORITY:
+PRIORITY TODO:
 - Reward function tweaks
-- Train experiment scripts
-
-- Averaging cosine distance lookup variation
 - Setup variants of experiment via branches
 
 TODO:
-- Train experiment scripts
-- Reward function
-- Random init of gallery
+- Variants:
+    - Lookup Training
+    - Gallery Moving Avg
+    - Moving Avg
+
+DONE, NOT ACTIVE:
 - Prune least seen track in gallery
 
-- Averaging cosine distance lookup
-- Being discriminative with gallery agent
+IDEAS:
+- Being more discriminative with gallery agent
 - Adding LookOut recovery, using agent to tune it (LookOut uses IOU only)
 - More advanced encodings/gallery, distance association
+- Random init of gallery

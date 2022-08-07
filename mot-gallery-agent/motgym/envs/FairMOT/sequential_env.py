@@ -38,7 +38,7 @@ class SequentialFairmotEnv(BaseFairmotEnv):
 
         self.viable_tids = [
             tid for tid,
-            frame_ids in tid_dict.items() if len(frame_ids) >= self.frame_rate * 5]
+            frame_ids in tid_dict.items() if len(frame_ids) >= self.frame_rate * 1]
         if track_id:  # For debugging
             self.focus_tid = self.viable_tids[track_id]
         else:
@@ -51,6 +51,8 @@ class SequentialFairmotEnv(BaseFairmotEnv):
         print(f'Assigned ground truth TrackID: {self.focus_tid}')
         frame_range = f'{self.frame_ids[0]}-{self.frame_ids[-1]}'
         self.seq_len = self.frame_ids[-1]-self.frame_ids[0]
+        self.buffer_size = int(self.frame_rate / 30.0 *
+                               self.tracker_args.track_buffer)
         print(f'Evaluating frames {frame_range} (Len {self.seq_len})')
 
     def _track_update(self, frame_id):
@@ -129,6 +131,7 @@ class SequentialFairmotEnv(BaseFairmotEnv):
         self.gt_tid = None
         self.acc_error = 0
         BaseTrack._count = 0
+        self.aux_thres = random.random()
         self.tracker = Tracker(
             self.tracker_args, self.frame_rate, lookup_gallery=False)
 
@@ -155,14 +158,19 @@ class SequentialFairmotEnv(BaseFairmotEnv):
         TP = self.track.track_id == self.gt_tid
         prop_reward = 100 / self.seq_len
 
+        done = False
         if TN or TP:
             reward = prop_reward
-            self.acc_error = 1
+            self.acc_error = 0
         else:
-            reward = -prop_reward  # * self.acc_error
+            reward = -prop_reward
             self.acc_error += 1
 
-        return reward, False
+        # Track permanently lost
+        if self.acc_error > self.buffer_size:
+            done = True
+
+        return reward, done
 
     @BaseFairmotEnv.calc_fps
     def step(self, action):
@@ -170,14 +178,13 @@ class SequentialFairmotEnv(BaseFairmotEnv):
             if track is self.track:
                 track.update_gallery(action, track.curr_feat)
             else:
-                # aux_action = 1 if random.random() < 0.5 else 0
-                aux_action = random.randint(0, 1)
+                aux_action = 1 if random.random() < self.aux_thres else 0
                 track.update_gallery(aux_action, track.curr_feat)
 
-        done_chk1 = self._step_frame()
+        is_end = self._step_frame()
         self.gt_tid = self._get_gt_tid()
-        reward, done_chk2 = self._generate_reward()
-        done = done_chk1 or done_chk2
+        reward, track_lost = self._generate_reward()
+        done = is_end or track_lost
         self.ep_reward += reward
 
         obs = self._get_obs(self.track)
