@@ -75,7 +75,7 @@ class ParallelFairmotEnv(BaseFairmotEnv):
         self.frame_id = 1
         self.track_idx = 0
         BaseTrack._count = 0
-        self.tracker = Tracker(self.tracker_args, self.frame_rate)
+        self.tracker = Tracker(self.tracker_args, self.frame_rate, lookup_gallery=10)
 
     def reset(self):
         self._reset_seq()

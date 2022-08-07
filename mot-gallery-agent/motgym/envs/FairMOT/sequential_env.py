@@ -133,7 +133,7 @@ class SequentialFairmotEnv(BaseFairmotEnv):
         BaseTrack._count = 0
         self.aux_thres = random.random()
         self.tracker = Tracker(
-            self.tracker_args, self.frame_rate, lookup_gallery=False)
+            self.tracker_args, self.frame_rate, lookup_gallery=10)
 
     def reset(self):
         self._reset_env()
