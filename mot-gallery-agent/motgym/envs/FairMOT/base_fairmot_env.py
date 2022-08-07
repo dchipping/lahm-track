@@ -28,8 +28,10 @@ class BaseFairmotEnv(BasicMotEnv):
         '''
         self.observation_space = spaces.Box(
             np.zeros((6,)), np.array([1, 1, 5000, 1, 1, 1]), shape=(6,), dtype=float)
-        
-        self.tracker_args = opts().init(['mot'])#, '--track_buffer=100'])
+
+        buffer_size = 500  # Tracks are 'never' lost during training!
+        self.tracker_args = opts().init(
+            ['mot', f'--track_buffer={buffer_size}'])
 
     def reset(self):
         return np.zeros((6,))
@@ -37,7 +39,7 @@ class BaseFairmotEnv(BasicMotEnv):
     def step(self, action):
         return np.zeros((6,)), 1, True, {}
 
-    
+
 if __name__ == "__main__":
     env = BaseFairmotEnv()
     check_env(env)
