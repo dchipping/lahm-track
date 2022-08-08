@@ -127,13 +127,15 @@ class SequentialFairmotEnv(BaseFairmotEnv):
         return int(hypothesis_tid) if not isnan(hypothesis_tid) else None
 
     def _reset_state(self):
+        self.seq = random.choice(self.seqs)
+        self.assign_target()
         self.frame_id = self.frame_ids[0]
         self.gt_tid = None
         self.acc_error = 0
         BaseTrack._count = 0
         self.aux_thres = random.random()
         self.tracker = Tracker(
-            self.tracker_args, self.frame_rate, lookup_gallery=False)
+            self.tracker_args, self.frame_rate, lookup_gallery=0)
 
     def reset(self):
         self._reset_env()
@@ -161,13 +163,14 @@ class SequentialFairmotEnv(BaseFairmotEnv):
         done = False
         if TN or TP:
             reward = prop_reward
-            self.acc_error = 0
+            self.acc_error = 1
         else:
-            reward = -prop_reward
+            reward = -prop_reward * self.acc_error
             self.acc_error += 1
 
         # Track permanently lost
         if self.acc_error > self.buffer_size:
+            print('Terminating early')
             done = True
 
         return reward, done
@@ -219,8 +222,6 @@ class Mot17SequentialEnv(SequentialFairmotEnv):
         dataset = 'MOT17/train_half'
         detections = 'FairMOT/MOT17/train_half'
         super().__init__(dataset, detections)
-        self.seq = random.choice(self.seqs)
-        self.assign_target()
 
 
 class Mot20SequentialEnv(SequentialFairmotEnv):
@@ -228,8 +229,6 @@ class Mot20SequentialEnv(SequentialFairmotEnv):
         dataset = 'MOT17/train_half'
         detections = 'FairMOT/MOT17/train_half'
         super().__init__(dataset, detections)
-        self.seq = random.choice(self.seqs)
-        self.assign_target()
 
 
 class MotSynthParallelEnv(SequentialFairmotEnv):
@@ -237,5 +236,3 @@ class MotSynthParallelEnv(SequentialFairmotEnv):
         dataset = 'MOTSynth/train'
         detections = 'FairMOT/MOTSynth/train'
         super().__init__(dataset, detections)
-        self.seq = random.choice(self.seqs)
-        self.assign_target()

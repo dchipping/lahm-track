@@ -447,30 +447,30 @@ def custom_embedding_distance(n, tracks, detections, metric='cosine'):
 
     # Pick n min from gallery as smooth_feat (in place of moving average)
     num_dets = len(detections)
-    track_features = [] # (num_tracks, num_dets, 128)
+    track_features = []  # (num_tracks, num_dets, 128)
     for i, track in enumerate(tracks):
-        if track.features:
-            feats = np.asarray(track.features)
+        # If gallery is larger than n, take best n features
+        feats = np.asarray(track.features)
+        if len(track.features) > n:
+            gallery_cost_matrix = cdist(feats, det_features, metric)
+            min_row_idxs = np.argpartition(
+                gallery_cost_matrix, n, axis=0)[:n].T
+            assert min_row_idxs.shape == (num_dets, n)
 
-            # If gallery is larger than n, take best n features
-            if len(track.features) > n:
-                gallery_cost_matrix = cdist(feats, det_features, metric)
-                min_row_idxs = np.argpartition(
-                    gallery_cost_matrix, n, axis=0)[:n].T
-                assert min_row_idxs.shape == (num_dets, n)
+            # Best averaged track feature for each detection
+            smooth_feat_vs_det = np.empty(
+                (num_dets, 128))  # (num_dets, 128)
+            for det_n in range(num_dets):
+                best_n_feats = feats[min_row_idxs[det_n], :]  # (n, 128)
+                smooth_feat = np.average(best_n_feats, axis=0)  # (128,)
+                smooth_feat_vs_det[det_n, :] = smooth_feat
+        elif track.features:
+            smooth_feat = np.average(feats, axis=0)
+            smooth_feat_vs_det = np.tile(smooth_feat, (num_dets, 1))
+        else:
+            smooth_feat_vs_det = np.tile(track.smooth_feat, (num_dets, 1))
 
-                # Best averaged track feature for each detection
-                smooth_feat_vs_det = np.empty(
-                    (num_dets, 128))  # (num_dets, 128)
-                for det_n in range(num_dets):
-                    best_n_feats = feats[min_row_idxs[det_n], :]  # (n, 128)
-                    smooth_feat = np.average(best_n_feats, axis=0)  # (128,)
-                    smooth_feat_vs_det[det_n, :] = smooth_feat
-            else:
-                smooth_feat = np.average(feats, axis=0)
-                smooth_feat_vs_det = np.tile(smooth_feat, (num_dets, 1))
-
-            track_features.append(smooth_feat_vs_det)
+        track_features.append(smooth_feat_vs_det)
 
     for det_n in range(num_dets):
         track_features_vs_det = []
@@ -481,7 +481,7 @@ def custom_embedding_distance(n, tracks, detections, metric='cosine'):
         cost_col = cdist(track_features_vs_det, [det_features[det_n]], metric)
         cost_matrix[:, det_n] = cost_col.flatten()
 
-    cost_matrix = np.maximum(0.0, cost_matrix) # Nomalized features
+    cost_matrix = np.maximum(0.0, cost_matrix)  # Nomalized features
     return cost_matrix
 
 
