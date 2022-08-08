@@ -21,8 +21,7 @@ class Mot17SequentialEnv(DevSequentialFairmotEnv):
         dataset = 'MOT17/train_half'
         detections = 'FairMOT/MOT17/train_half'
         super().__init__(dataset, detections)
-        self.seq = seq if seq else random.choice(self.seqs)
-        self.assign_target()
+        if seq: self.seqs = [seq]
 
 
 class Mot20SequentialEnv(DevSequentialFairmotEnv):
@@ -30,8 +29,7 @@ class Mot20SequentialEnv(DevSequentialFairmotEnv):
         dataset = 'MOT17/train_half'
         detections = 'FairMOT/MOT17/train_half'
         super().__init__(dataset, detections)
-        self.seq = seq if seq else random.choice(self.seqs)
-        self.assign_target()
+        if seq: self.seqs = [seq]
 
 
 class MotSynthSequentialEnv(DevSequentialFairmotEnv):
@@ -39,5 +37,4 @@ class MotSynthSequentialEnv(DevSequentialFairmotEnv):
         dataset = 'MOTSynth/train'
         detections = 'FairMOT/MOTSynth/train'
         super().__init__(dataset, detections)
-        self.seq = seq if seq else random.choice(self.seqs)
-        self.assign_target()
+        if seq: self.seqs = [seq]
