@@ -24,23 +24,23 @@ register(id='MotSynthSequentialEnv-v0',
 
 # Individual MOT17 Sequential
 register(id='Mot17SequentialEnvSeq02-v0',
-         entry_point='motgym.envs.FairMOT.variants.individual_sequential_env:Mot17SequentialEnvSeq02')
+         entry_point='motgym.envs.FairMOT.variants.individual_sequential_envs:Mot17SequentialEnvSeq02')
 register(id='Mot17SequentialEnvSeq04-v0',
-         entry_point='motgym.envs.FairMOT.variants.individual_sequential_env:Mot17SequentialEnvSeq04')
+         entry_point='motgym.envs.FairMOT.variants.individual_sequential_envs:Mot17SequentialEnvSeq04')
 register(id='Mot17SequentialEnvSeq05-v0',
-         entry_point='motgym.envs.FairMOT.variants.individual_sequential_env:Mot17SequentialEnvSeq05')
+         entry_point='motgym.envs.FairMOT.variants.individual_sequential_envs:Mot17SequentialEnvSeq05')
 register(id='Mot17SequentialEnvSeq09-v0',
-         entry_point='motgym.envs.FairMOT.variants.individual_sequential_env:Mot17SequentialEnvSeq09')
+         entry_point='motgym.envs.FairMOT.variants.individual_sequential_envs:Mot17SequentialEnvSeq09')
 
 # Individual MOT20 Sequential
 register(id='Mot20SequentialEnvSeq01-v0',
-         entry_point='motgym.envs.FairMOT.variants.individual_sequential_env:Mot20SequentialEnvSeq01')
+         entry_point='motgym.envs.FairMOT.variants.individual_sequential_envs:Mot20SequentialEnvSeq01')
 register(id='Mot20SequentialEnvSeq02-v0',
-         entry_point='motgym.envs.FairMOT.variants.individual_sequential_env:Mot20SequentialEnvSeq02')
+         entry_point='motgym.envs.FairMOT.variants.individual_sequential_envs:Mot20SequentialEnvSeq02')
 register(id='Mot20SequentialEnvSeq03-v0',
-         entry_point='motgym.envs.FairMOT.variants.individual_sequential_env:Mot20SequentialEnvSeq03')
+         entry_point='motgym.envs.FairMOT.variants.individual_sequential_envs:Mot20SequentialEnvSeq03')
 register(id='Mot20SequentialEnvSeq04-v0',
-         entry_point='motgym.envs.FairMOT.variants.individual_sequential_env:Mot20SequentialEnvSeq04')
+         entry_point='motgym.envs.FairMOT.variants.individual_sequential_envs:Mot20SequentialEnvSeq04')
 
 
 def add_path(path):

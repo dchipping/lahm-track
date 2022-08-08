@@ -18,6 +18,7 @@ pip install -e mot-gallery-agent
 Optional Move Dataset/Detections
 ```bash
 cd mot-gallery-agent
+
 mv ./motgym/datasets <target/dataset/path>
 ./tools/datasets_symbolic_link.sh <target/dataset/path>
 
@@ -27,9 +28,13 @@ mv ./motgym/detections <target/detections/path>
 
 ## Setup Dataset and Detections
 ```bash
-# Continue with instructions in ./motgym/datasets/DATASETS.md
-# Create cached feats and detections using tracker in ./motgym/datasets/<tracker>/<gen_tracker_dets_script> e.g. gen_fairmot_jde.py
+# Download datasets with instructions in ./motgym/datasets/DATASETS.md
+# Create features and detections using tracker in ./motgym/datasets/<tracker>/<gen_dets_script> e.g. gen_fairmot_jde.py
 
 # Run a manual test after this using 
 python ./tools/manual_test_sequential.py
 ```
+
+## Acknowledgements
+
+This code leans on the work of the authors of FairMOT (for baseline) and ByteTrack (for visulisation scripts).

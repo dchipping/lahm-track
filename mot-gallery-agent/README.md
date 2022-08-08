@@ -11,3 +11,5 @@ nvidia-smi --query-gpu=compute_cap --format=csv
 # Check CPU Core Usage
 top # Then press 1
 ```
+
+## Architecture
