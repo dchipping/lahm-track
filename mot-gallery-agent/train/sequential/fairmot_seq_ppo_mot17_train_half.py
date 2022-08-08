@@ -36,7 +36,7 @@ config = {
 }
 
 stop = {
-    # "training_iteration": 1000
+    "training_iteration": 10000
 }
 
 # Run MOT17 training
