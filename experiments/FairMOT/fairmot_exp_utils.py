@@ -1,3 +1,4 @@
+from TrackEval import trackeval
 import datetime as dt
 import logging
 import os
@@ -24,7 +25,6 @@ from tracking_utils.utils import mkdir_if_missing
 path = os.path.join(os.getcwd(), 'tools')
 if path not in sys.path:
     sys.path.insert(0, path)
-from TrackEval import trackeval
 
 
 def write_results(filename, results, data_type):
@@ -159,11 +159,13 @@ def main(opt, data_root='/data/MOT16/train', seqs=('MOT16-05',), exp_name='demo'
     eval_config['DISPLAY_LESS_PROGRESS'] = False
     dataset_config = trackeval.datasets.MotChallenge2DBox.get_default_dataset_config()
     dataset_config['GT_FOLDER'] = data_root
-    dataset_config['TRACKERS_FOLDER'] = osp.join(os.getcwd(), 'results')
+    dataset_config['TRACKERS_FOLDER'] = results_dir if results_dir else osp.join(
+        os.getcwd(), 'results')
     dataset_config['TRACKERS_TO_EVAL'] = [osp.join(exp_name, run_name)]
     dataset_config['TRACKER_SUB_FOLDER'] = ''
     dataset_config['SPLIT_TO_EVAL'] = Path(data_root).name
-    dataset_config['OUTPUT_FOLDER'] = osp.join(os.getcwd(), 'results')
+    dataset_config['OUTPUT_FOLDER'] = results_dir if results_dir else osp.join(
+        os.getcwd(), 'results')
     dataset_config['SKIP_SPLIT_FOL'] = True
     dataset_config['SEQMAP_FILE'] = osp.join(data_root, 'seqmap.txt')
 
