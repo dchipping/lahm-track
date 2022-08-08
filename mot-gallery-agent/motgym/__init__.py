@@ -2,6 +2,9 @@ import os
 import sys
 from gym.envs.registration import register
 
+# Register Base FairMOT Env
+register(id='BaseFairmotEnv-v0',
+         entry_point='motgym.envs.FairMOT.base_fairmot_env:BaseFairmotEnv')
 
 # Register Parallel Environments
 register(id='Mot17ParallelEnv-v0',

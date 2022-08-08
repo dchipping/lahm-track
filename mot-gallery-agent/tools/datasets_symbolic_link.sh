@@ -1,14 +1,14 @@
-# If datasets are stored in a different location
+# If detections are stored in a different location
 # create a symbolic link to emulate a local folder
 #
 # Usage:
 # cd ./path/to/mot-gallery-agent
-# ./tools/datasets_symbolic_link.sh [abs/path/to/datasets]
+# ./tools/detections_symbolic_link.sh [abs/path/to/detections]
 
-DATA_DIR='./motgym/datasets'
+DATA_DIR='./motgym/detections'
 
-if ! [ -d $DATA_DIR ]; then
-    echo "A 'datasets' directory already exists!"
+if [ -d $DATA_DIR ]; then
+    echo "A 'detections' directory already exists!"
     exit
 elif ! [ -d $1 ]; then
     echo "Invalid directory path"

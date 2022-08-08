@@ -1,4 +1,3 @@
-from TrackEval import trackeval
 import datetime as dt
 import logging
 import os
@@ -25,6 +24,7 @@ from tracking_utils.utils import mkdir_if_missing
 path = os.path.join(os.getcwd(), 'tools')
 if path not in sys.path:
     sys.path.insert(0, path)
+from TrackEval import trackeval
 
 
 def write_results(filename, results, data_type):

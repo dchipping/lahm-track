@@ -61,7 +61,7 @@ class CachedJDETracker(JDETracker):
 if __name__ == "__main__":
     conf_thres = 0.4 # FairMOT authors achieve SOTA on MOT17/20 with 0.4
     model_path = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/trackers/FairMOT/models/fairmot_dla34.pth'
-    data_dir = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/datasets/MOT17/train_half'
+    data_dir = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/datasets/MOT17/val_half'
 
     seqs = os.listdir(data_dir)
     for seq in seqs:

@@ -1,5 +1,13 @@
-## mot-gym
-1) `cd path/to/mot-gym`
-2) `pip install -e mot-gym`
-3) `pip install Cython`
-`nvidia-smi --query-gpu=compute_cap --format=csv`
+# MOT Gallery Agent
+
+Useful Commands:
+
+```bash
+# Check GPU Compute Ability
+nvidia-smi --query-gpu=compute_cap --format=csv
+```
+
+```bash
+# Check CPU Core Usage
+top # Then press 1
+```

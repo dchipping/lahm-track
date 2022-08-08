@@ -7,7 +7,7 @@
 
 DATA_DIR='./motgym/detections'
 
-if ! [ -d $DATA_DIR ]; then
+if [ -d $DATA_DIR ]; then
     echo "A 'detections' directory already exists!"
     exit
 elif ! [ -d $1 ]; then

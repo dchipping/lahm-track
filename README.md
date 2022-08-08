@@ -3,21 +3,33 @@
 - Tools for benchmarking and visualising tracking
 - Includes mot-gallery-agent for training RL apperance management agent
 
-PRIORITY TODO:
-- Reward function tweaks
-- Setup variants of experiment via branches
 
-TODO:
-- Variants:
-    - Lookup Training
-    - Gallery Moving Avg
-    - Moving Avg
+## Setup Environment
 
-DONE, NOT ACTIVE:
-- Prune least seen track in gallery
+```bash
+git submodule update --init
 
-IDEAS:
-- Being more discriminative with gallery agent
-- Adding LookOut recovery, using agent to tune it (LookOut uses IOU only)
-- More advanced encodings/gallery, distance association
-- Random init of gallery
+conda create -n <tracker name e.g. FairMOT>
+
+# Follow tracker's install guide e.g. see ./mot-gallery-agent/motgym/trackers/FairMOT/README.md
+
+pip install -e mot-gallery-agent
+```
+Optional Move Dataset/Detections
+```bash
+cd mot-gallery-agent
+mv ./motgym/datasets <target/dataset/path>
+./tools/datasets_symbolic_link.sh <target/dataset/path>
+
+mv ./motgym/detections <target/detections/path>
+./tools/detections_symbolic_link.sh <target/detections/path>
+```
+
+## Setup Dataset and Detections
+```bash
+# Continue with instructions in ./motgym/datasets/DATASETS.md
+# Create cached feats and detections using tracker in ./motgym/datasets/<tracker>/<gen_tracker_dets_script> e.g. gen_fairmot_jde.py
+
+# Run a manual test after this using 
+python ./tools/manual_test_sequential.py
+```
