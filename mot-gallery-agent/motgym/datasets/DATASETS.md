@@ -14,7 +14,9 @@ python seperate_seqs.py
 cd MOT20
 wget https://motchallenge.net/data/MOT20.zip
 unzip MOT20.zip
-rm MOT20.zip
+mv MOT20/train .
+mv MOT20/test .
+rm -d MOT20.zip MOT20
 python split_seqs.py
 ```
 

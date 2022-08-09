@@ -28,7 +28,7 @@ mv ./motgym/detections <target/detections/path>
 
 ## Setup Dataset and Detections
 ```bash
-# Download datasets with instructions in ./motgym/datasets/DATASETS.md
+# Download datasets with instructions in [DATASETS.md](/motgym/datasets/DATASETS.md)
 # Create features and detections using tracker in ./motgym/datasets/<tracker>/<gen_dets_script> e.g. gen_fairmot_jde.py
 
 # Run a manual test after this using 
