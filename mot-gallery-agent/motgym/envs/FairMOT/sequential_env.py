@@ -165,7 +165,7 @@ class SequentialFairmotEnv(BaseFairmotEnv):
             reward = prop_reward
             self.acc_error = 1
         else:
-            reward = -prop_reward * self.acc_error
+            reward = -prop_reward  # * self.acc_error
             self.acc_error += 1
 
         # Track permanently lost
