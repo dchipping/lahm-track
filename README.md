@@ -26,6 +26,15 @@ mv ./motgym/detections <target/detections/path>
 ./tools/detections_symbolic_link.sh <target/detections/path>
 ```
 
+Optional FairMOT Model Download
+```bash
+pip install gdown
+cd mot-gallery-agent/motgym/trackers/FairMOT
+mkdir models
+cd models
+gdown 1iqRQjsG9BawIl8SlFomMg5iwkb6nqSpi
+```
+
 ## Setup Dataset and Detections
 ```bash
 # Download datasets with instructions in [DATASETS.md](/motgym/datasets/DATASETS.md)

@@ -9,3 +9,4 @@ profiling_stats.txt
 results/
 *.pth
 videos/
+*.zip
