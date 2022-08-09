@@ -16,5 +16,5 @@ main(opt,
      exp_name=Path(__file__).stem,
      show_image=False,
      # results_dir=RESULTS_DIR,
-     lookup_gallery=5,
+     lookup_gallery=10,
      agent_path='greedy')
