@@ -19,6 +19,10 @@ class SequentialFairmotEnv(BaseFairmotEnv):
 
     def __init__(self, dataset, detections):
         super().__init__(dataset, detections)
+        self.seq = random.choice(self.seqs)
+        print(f'Loading data from: {osp.join(self.data_dir, self.seq)}')
+        self._load_dataset(self.seq)
+        self._load_detections(self.seq)
 
     @staticmethod
     def next_instance():
@@ -26,10 +30,6 @@ class SequentialFairmotEnv(BaseFairmotEnv):
         return SequentialFairmotEnv._instance
 
     def assign_target(self, track_id=None):
-        print(f'Loading data from: {osp.join(self.data_dir, self.seq)}')
-        self._load_dataset(self.seq)
-        self._load_detections(self.seq)
-
         gts = self.evaluator.gt_frame_dict.items()
         tid_dict = defaultdict(list)
         for frame_id, gt in gts:
@@ -127,7 +127,6 @@ class SequentialFairmotEnv(BaseFairmotEnv):
         return int(hypothesis_tid) if not isnan(hypothesis_tid) else None
 
     def _reset_state(self):
-        self.seq = random.choice(self.seqs)
         self.assign_target()
         self.frame_id = self.frame_ids[0]
         self.gt_tid = None

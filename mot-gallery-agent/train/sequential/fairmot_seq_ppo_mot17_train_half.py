@@ -10,8 +10,8 @@ RUN_NAME = ''
 RESULTS_DIR = ''  # tensorboard --logdir $RESULTS_DIR
 INITIAL_CHECKPOINT = ''
 NUM_LOOPS = 5
-NUM_CORES = 7
-NUM_GPUS = 1
+NUM_CORES = 7  # nproc
+NUM_GPUS = 1  # nvidia-smi -L | grep GPU | wc -l
 
 # Generate test dir and file names
 path = Path(__file__)
@@ -36,7 +36,7 @@ config = {
 }
 
 stop = {
-    "training_iteration": 10000
+    "training_iteration": 1000
 }
 
 # Run MOT17 training
@@ -46,7 +46,7 @@ results = tune.run("PPO",
                    local_dir=results_dir,
                    stop=stop,
                    restore=checkpoint_path,
-                   checkpoint_freq=50,
+                   checkpoint_freq=5,
                    checkpoint_at_end=True)
 checkpoint_path = results.get_last_checkpoint().local_path
 

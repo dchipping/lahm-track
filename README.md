@@ -1,8 +1,9 @@
-# Reinforcement Learning Appearance History Management for Visual Multi-Object Tracking
-
-- Tools for benchmarking and visualising tracking
-- Includes mot-gallery-agent for training RL apperance management agent
-
+# Visual Multi-Object Tracking using Learned Appearance History Management (LAHM)
+### A framework for training and evaluating Apperance History Management agents in a Multi-Object visual tracking context:
+- `/experiments`: Evaluation scripts for running agents in the tracker on MOT Challenge datasets.
+- `/mot-gallery-agent`: Package for training apperance management agents using variety of modern Reinforcement Learning methods.
+- `/tools`: Results analysis tooling and visulisation scripts for qualatative anlysis.
+- `/docs`: Research report and additional material webpage.
 
 ## Setup Environment
 
@@ -36,10 +37,10 @@ gdown 1iqRQjsG9BawIl8SlFomMg5iwkb6nqSpi
 ```
 
 ## Setup Dataset and Detections
-```bash
-# Download datasets with instructions in [DATASETS.md](/motgym/datasets/DATASETS.md)
-# Create features and detections using tracker in ./motgym/datasets/<tracker>/<gen_dets_script> e.g. gen_fairmot_jde.py
+### [Datasets](/motgym/datasets/DATASETS.md)
+### [Detections](/mot-gallery-agent/motgym/detections/)
 
+```bash
 # Run a manual test after this using 
 python ./tools/manual_test_sequential.py
 ```

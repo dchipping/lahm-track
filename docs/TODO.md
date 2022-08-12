@@ -3,6 +3,9 @@ PRIORITY TODO:
 - Setup variants of experiment via branches
 
 TODO:
+- Find seq where switches occur
+- Sparse rewards
+- Improvement on a few seqs
 - Variants:
     - Lookup Training
     - Gallery Moving Avg

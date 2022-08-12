@@ -458,7 +458,7 @@ def custom_embedding_distance(n, tracks, detections, metric='cosine'):
             assert min_row_idxs.shape == (num_dets, n)
 
             # Best averaged track feature for each detection
-            smooth_feat_vs_det = np.empty(
+            smooth_feat_vs_det = np.zeros(
                 (num_dets, 128))  # (num_dets, 128)
             for det_n in range(num_dets):
                 best_n_feats = feats[min_row_idxs[det_n], :]  # (n, 128)

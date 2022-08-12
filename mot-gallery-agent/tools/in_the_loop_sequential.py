@@ -18,13 +18,14 @@ def run_sequential_env(target_idx=None):
     # env = Mot17SequentialEnv('MOT17-02')
     env = gym.make("motgym:Mot17SequentialEnv-v0")
 
+    obs = env.reset()
+    env.render()
+    
     # Option to fix target for repeat comparison
     if target_idx:
         env.assign_target(target_idx)
     print(env.viable_tids, len(env.viable_tids))
 
-    obs = env.reset()
-    env.render()
 
     done = False
     while not done:
