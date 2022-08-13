@@ -1,3 +1,4 @@
+# find . -name 'img1' | xargs -I % sh -c 'ls % | wc -l'
 *.npy
 *.npz
 *short-seq/

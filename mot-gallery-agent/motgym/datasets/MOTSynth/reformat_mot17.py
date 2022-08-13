@@ -1,3 +1,4 @@
+# find . -name 'img1' | xargs -I % sh -c 'if [ $(ls % | wc -l) -lt 1800 ]; then echo % $(ls % | wc -l); fi'
 import os
 import shutil
 
