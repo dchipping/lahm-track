@@ -146,7 +146,9 @@ class SequentialFairmotEnv(BaseFairmotEnv):
             done = self._step_frame()
             self.gt_tid = self._get_gt_tid()
             if done:
-                raise Exception('Sequence too short')
+                self._reset_env()
+                self._reset_state()
+                self.online_targets = self._track_update(self.frame_id)
 
         self.track = next(filter(lambda x: x.track_id == self.gt_tid,
                                  self.online_targets))
