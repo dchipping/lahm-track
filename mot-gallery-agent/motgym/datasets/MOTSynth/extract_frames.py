@@ -45,10 +45,12 @@ def main():
     frames_dir = os.path.join(out_dir, 'frames')
     os.makedirs(frames_dir, exist_ok=True)
     video_list = os.listdir(video_dir)
+    existing_list = set(map(lambda x: f'{x}.mp4', os.listdir(out_dir)))
+    remaining_list = [video for video in video_list if video not in existing_list]
     pool = multiprocessing.Pool(processes=20)
     print("start", out_dir, video_dir)
     [pool.apply_async(extract, (video, frames_dir, video_dir))
-     for video in video_list]
+     for video in remaining_list]
 
     pool.close()
     pool.join()

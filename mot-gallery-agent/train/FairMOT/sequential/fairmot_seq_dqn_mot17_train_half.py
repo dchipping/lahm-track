@@ -10,21 +10,22 @@ from ray import rllib, tune
 RUN_NAME = ''
 RESULTS_DIR = ''  # tensorboard --logdir $RESULTS_DIR
 INITIAL_CHECKPOINT = ''
-# NUM_LOOPS = 5
-NUM_CORES = 8  # nproc
+NUM_CPUS = 8  # nproc
 NUM_GPUS = 1  # nvidia-smi -L | grep GPU | wc -l
+STOP_ITERS = 100
+CHECKPOINT_FREQ = 25
 
 # Generate test dir and file names
 path = Path(__file__)
-default_results_dir = sys.argv[1] if sys.argv[1] else osp.join(
-    path.parents[2], "results", path.stem)
+default_results_dir = sys.argv[1] if len(sys.argv) == 2 else osp.join(
+    path.parents[3], "results", path.stem)
 results_dir = osp.join(
     RESULTS_DIR, path.stem) if RESULTS_DIR else default_results_dir
 run_name = RUN_NAME if RUN_NAME else dt.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 checkpoint_path = INITIAL_CHECKPOINT if INITIAL_CHECKPOINT else None
-# MotSynthSequentialEnv-v0
+
 # Check env is valid
-env = gym.make("motgym:MotSynthSequentialEnv-v0")
+env = gym.make("motgym:Mot17SequentialEnv-v0")
 rllib.utils.check_env(env)
 
 # Default config and stoping criteria, see useful scaling guide:
@@ -32,23 +33,24 @@ rllib.utils.check_env(env)
 config = {
     "framework": "torch",
     "num_gpus": NUM_GPUS,
-    "num_workers": NUM_CORES - 1,  # num_workers = Number of similtaneous trials occuring
+    "num_workers": NUM_CPUS - 1,  # num_workers = Number of similtaneous trials occuring
     "recreate_failed_workers": True,  # For extra stability
-    "env": "motgym:MotSynthSequentialEnv-v0"
+    "env": "motgym:Mot17SequentialEnv-v0"
 }
 
 stop = {
-    "training_iteration": 1000
+    "training_iteration": STOP_ITERS,
+    # "episode_reward_mean": 90
 }
 
 # Run MOT17 training
-results = tune.run("PPO",
+results = tune.run("DQN",
                    config=config,
                    name=run_name,
                    local_dir=results_dir,
                    stop=stop,
                    restore=checkpoint_path,
-                   checkpoint_freq=5,
+                   checkpoint_freq=CHECKPOINT_FREQ,
                    checkpoint_at_end=True)
 checkpoint_path = results.get_last_checkpoint().local_path
 
