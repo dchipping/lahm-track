@@ -7,7 +7,6 @@ import FairMOT.src._init_paths
 from tracker import matching
 from tracker.basetrack import BaseTrack, TrackState
 from tracking_utils.kalman_filter import KalmanFilter
-from tracking_utils.utils import *
 
 
 class AgentSTrack(BaseTrack):
