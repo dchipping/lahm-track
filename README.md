@@ -37,8 +37,8 @@ gdown 1iqRQjsG9BawIl8SlFomMg5iwkb6nqSpi
 ```
 
 ## Setup Dataset and Detections
-### [Datasets](/motgym/datasets/DATASETS.md)
-### [Detections](/mot-gallery-agent/motgym/detections/)
+### [Datasets](/mot-gallery-agent/motgym/datasets/DATASETS.md)
+### [Detections](/mot-gallery-agent/motgym/detections/DETECTIONS.md)
 
 ```bash
 # Run a manual test after this using 

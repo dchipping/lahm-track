@@ -1,6 +1,7 @@
 import datetime as dt
 import os
 import os.path as osp
+import sys
 from pathlib import Path
 
 import gym
@@ -15,7 +16,7 @@ NUM_GPUS = 1
 
 # Generate test dir and file names
 path = Path(__file__)
-default_results_dir = osp.join(path.parents[2], "results", path.stem)
+default_results_dir = sys.argv[1] if sys.argv[1] else osp.join(path.parents[2], "results", path.stem)
 results_dir = osp.join(
     RESULTS_DIR, path.stem) if RESULTS_DIR else default_results_dir
 run_name = RUN_NAME if RUN_NAME else dt.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")

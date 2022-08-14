@@ -2,6 +2,13 @@ PRIORITY TODO:
 - Reward function tweaks
 - Setup variants of experiment via branches
 
+- Cluster job
+- Repo cleanup
+- Intro
+- Switches
+- Recovery
+- VOT LT Challenge
+
 TODO:
 - Find seq where switches occur
 - Sparse rewards

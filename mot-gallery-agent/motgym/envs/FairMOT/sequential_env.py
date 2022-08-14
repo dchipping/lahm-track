@@ -232,7 +232,7 @@ class Mot20SequentialEnv(SequentialFairmotEnv):
         super().__init__(dataset, detections)
 
 
-class MotSynthParallelEnv(SequentialFairmotEnv):
+class MotSynthSequentialEnv(SequentialFairmotEnv):
     def __init__(self):
         dataset = 'MOTSynth/train'
         detections = 'FairMOT/MOTSynth/train'
