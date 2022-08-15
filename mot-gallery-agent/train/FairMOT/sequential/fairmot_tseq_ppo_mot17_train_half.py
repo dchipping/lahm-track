@@ -5,7 +5,9 @@ import sys
 from pathlib import Path
 
 import gym
+import ray
 from ray import rllib, tune
+from ray.tune import CLIReporter
 
 RUN_NAME = ''
 RESULTS_DIR = ''  # tensorboard --logdir $RESULTS_DIR
@@ -15,6 +17,7 @@ NUM_CPUS = 8  # nproc
 NUM_GPUS = 1  # nvidia-smi -L | grep GPU | wc -l
 STOP_ITERS = 100
 CHECKPOINT_FREQ = 25
+REPORT_FREQ = 900
 
 # Generate test dir and file names
 path = Path(__file__)
@@ -44,6 +47,10 @@ stop = {
     # "episode_reward_mean": 90
 }
 
+# Startup Ray
+ray.shutdown()
+ray.init(log_to_driver=False)
+
 # Run loop n number of times
 for _ in range(NUM_LOOPS):
     # Run MOT17-05 training
@@ -56,7 +63,8 @@ for _ in range(NUM_LOOPS):
                                 stop=stop,
                                 restore=checkpoint_path,
                                 checkpoint_freq=CHECKPOINT_FREQ,
-                                checkpoint_at_end=True)
+                                checkpoint_at_end=True,
+                                progress_reporter=CLIReporter(max_report_frequency=REPORT_FREQ))
     checkpoint_path = mot17_05_results.get_last_checkpoint().local_path
 
     # Run MOT17-02 training
@@ -69,7 +77,8 @@ for _ in range(NUM_LOOPS):
                                 stop=stop,
                                 restore=checkpoint_path,
                                 checkpoint_freq=CHECKPOINT_FREQ,
-                                checkpoint_at_end=True)
+                                checkpoint_at_end=True,
+                                progress_reporter=CLIReporter(max_report_frequency=REPORT_FREQ))
     checkpoint_path = mot17_02_results.get_last_checkpoint().local_path
 
     # Run MOT17-04 training
@@ -82,7 +91,8 @@ for _ in range(NUM_LOOPS):
                                 stop=stop,
                                 restore=checkpoint_path,
                                 checkpoint_freq=CHECKPOINT_FREQ,
-                                checkpoint_at_end=True)
+                                checkpoint_at_end=True,
+                                progress_reporter=CLIReporter(max_report_frequency=REPORT_FREQ))
     checkpoint_path = mot17_04_results.get_last_checkpoint().local_path
 
     # Run MOT17-09 training
@@ -95,7 +105,8 @@ for _ in range(NUM_LOOPS):
                                 stop=stop,
                                 restore=checkpoint_path,
                                 checkpoint_freq=CHECKPOINT_FREQ,
-                                checkpoint_at_end=True)
+                                checkpoint_at_end=True,
+                                progress_reporter=CLIReporter(max_report_frequency=REPORT_FREQ))
     checkpoint_path = mot17_09_results.get_last_checkpoint().local_path
 
 # Make checkpoint accessible for inference and benchmarking
