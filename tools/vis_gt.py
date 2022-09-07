@@ -119,7 +119,7 @@ def visualize_box(img, text, box, color_index):
 
 
 if __name__ == "__main__":
-    data_dir = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/datasets/MOTSynth/train'
+    data_dir = '/home/dchipping/project/dan-track/ahm-agent/motgym/datasets/MOTSynth/train'
 
     output_dir = '/home/dchipping/project/dan-track/videos/gt_images'
 

@@ -1,9 +1,9 @@
 from pathlib import Path
 from fairmot_exp_utils import *
 
-AGENT_PATH = '/home/dchipping/project/dan-track/mot-gallery-agent/results/ppo/checkpoint-50'
-MODEL_PATH = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/trackers/FairMOT/models/fairmot_dla34.pth'
-DATA_DIR = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/datasets/MOT17/val_half'
+AGENT_PATH = '/home/dchipping/project/dan-track/ahm-agent/results/ppo/checkpoint-50'
+MODEL_PATH = '/home/dchipping/project/dan-track/ahm-agent/motgym/trackers/FairMOT/models/fairmot_dla34.pth'
+DATA_DIR = '/home/dchipping/project/dan-track/ahm-agent/motgym/datasets/MOT17/val_half'
 RESULTS_DIR = ''
 
 conf_thres = 0.4

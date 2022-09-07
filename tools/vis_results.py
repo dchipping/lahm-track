@@ -102,7 +102,7 @@ def visualize_box(img, text, box, color_index):
     font = cv2.FONT_HERSHEY_SIMPLEX
     txt_size = cv2.getTextSize(text, font, 0.6, 1)[0]
     cv2.rectangle(img, (x0, y0), (x0+width, y0+height),
-                    color, 2)
+                  color, 2)
 
     txt_bk_color = (_COLORS[color_index % 80] *
                     255 * 0.7).astype(np.uint8).tolist()
@@ -119,12 +119,13 @@ def visualize_box(img, text, box, color_index):
 
 
 if __name__ == "__main__":
-    data_dir = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/datasets/MOT17/train_half'
+    data_dir = '/home/dchipping/project/dan-track/ahm-agent/motgym/datasets/MOT17/train_half'
     results_dir = '/home/dchipping/project/dan-track/seqs'
 
     output_dir = '/home/dchipping/project/dan-track/videos/images'
 
-    seqs = [seq.stem for seq in map(Path, os.listdir(results_dir)) if seq.suffix == '.txt']
+    seqs = [seq.stem for seq in map(
+        Path, os.listdir(results_dir)) if seq.suffix == '.txt']
     for seq in seqs:
         p = Path(results_dir)
         img_output_dir = osp.join(output_dir, p.parent.name, p.name, seq)

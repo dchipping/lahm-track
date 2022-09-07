@@ -58,7 +58,7 @@ cd "${DATADIR}MOT17/"
 wget -nv https://motchallenge.net/data/MOT17Det.zip
 unzip -q MOT17Det.zip
 rm MOT17Det.zip
-rsync -ar --info=progress2 /home/$USER/repos/lahm-track/mot-gallery-agent/tools/seperate_seqs.py .
+rsync -ar --info=progress2 /home/$USER/repos/lahm-track/ahm-agent/tools/seperate_seqs.py .
 python seperate_seqs.py
 
 # Download MOT20 data
@@ -69,7 +69,7 @@ python seperate_seqs.py
 # mv MOT20/train .
 # mv MOT20/test .
 # rm -d MOT20.zip MOT20
-# rsync -ar --info=progress2 /home/chipping/repos/lahm-track/mot-gallery-agent/tools/split_seqs.py .
+# rsync -ar --info=progress2 /home/chipping/repos/lahm-track/ahm-agent/tools/split_seqs.py .
 # python split_seqs.py
 
 # Download detections
@@ -83,9 +83,9 @@ echo "Data file structure:"
 find $SCRATCH -maxdepth 3
 
 # Run links
-cd /home/$USER/repos/lahm-track/mot-gallery-agent/
-rm -d /home/$USER/repos/lahm-track/mot-gallery-agent/motgym/datasets
-rm -d /home/$USER/repos/lahm-track/mot-gallery-agent/motgym/detections
+cd /home/$USER/repos/lahm-track/ahm-agent/
+rm -d /home/$USER/repos/lahm-track/ahm-agent/motgym/datasets
+rm -d /home/$USER/repos/lahm-track/ahm-agent/motgym/detections
 ./tools/datasets_symbolic_link.sh $(realpath $DATADIR)
 ./tools/detections_symbolic_link.sh $(realpath $DETSDIR)
 

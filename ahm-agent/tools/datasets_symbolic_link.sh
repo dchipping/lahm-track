@@ -2,7 +2,7 @@
 # create a symbolic link to emulate a local folder
 #
 # Usage:
-# cd ./path/to/mot-gallery-agent
+# cd ./path/to/ahm-agent
 # ./tools/detections_symbolic_link.sh [abs/path/to/detections]
 
 DATA_DIR='./motgym/detections'

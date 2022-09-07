@@ -12,13 +12,13 @@ git submodule update --init
 
 conda create -n <tracker name e.g. FairMOT>
 
-# Follow tracker's install guide e.g. see ./mot-gallery-agent/motgym/trackers/FairMOT/README.md
+# Follow tracker's install guide e.g. see ./ahm-agent/motgym/trackers/FairMOT/README.md
 
 pip install -e ahm-agent
 ```
 Optional Move Dataset/Detections
 ```bash
-cd mot-gallery-agent
+cd ahm-agent
 
 mv ./motgym/datasets <target/dataset/path>
 ./tools/datasets_symbolic_link.sh <target/dataset/path>
@@ -30,15 +30,15 @@ mv ./motgym/detections <target/detections/path>
 Optional FairMOT Model Download
 ```bash
 pip install gdown
-cd mot-gallery-agent/motgym/trackers/FairMOT
+cd ahm-agent/motgym/trackers/FairMOT
 mkdir models
 cd models
 gdown 1iqRQjsG9BawIl8SlFomMg5iwkb6nqSpi
 ```
 
 ## Setup Dataset and Detections
-### [Datasets](/mot-gallery-agent/motgym/datasets/DATASETS.md)
-### [Detections](/mot-gallery-agent/motgym/detections/DETECTIONS.md)
+### [Datasets](/ahm-agent/motgym/datasets/DATASETS.md)
+### [Detections](/ahm-agent/motgym/detections/DETECTIONS.md)
 
 ```bash
 # Run a manual test after this using 

@@ -21,7 +21,7 @@ def run_sequential_env(greedy=False, target_idx=None, seq=None):
     # trainer = ppo.PPOTrainer(
     #     config=config, env="motgym:BaseFairmotEnv-v0")
     # trainer.restore(
-    #     '/home/dchipping/project/dan-track/mot-gallery-agent/results/fairmot_seq_ppo_mot17_train_half/2022-08-11T05-04-20/checkpoint')
+    #     '/home/dchipping/project/dan-track/ahm-agent/results/fairmot_seq_ppo_mot17_train_half/2022-08-11T05-04-20/checkpoint')
 
     # Option to fix target for repeat comparison
     # if target_idx:
