@@ -19,7 +19,7 @@ from tracker.multitracker import JDETracker
 class CachedJDETracker(JDETracker):
     def __init__(self, opt, frame_rate):
         super().__init__(opt, frame_rate)
-    
+
     def jde_only(self, im_blob, img0):
         self.frame_id += 1
         if self.frame_id % 50 == 0 or self.frame_id == 1:
@@ -44,7 +44,8 @@ class CachedJDETracker(JDETracker):
             id_feature = F.normalize(id_feature, dim=1)
 
             reg = output['reg'] if self.opt.reg_offset else None
-            dets, inds = mot_decode(hm, wh, reg=reg, ltrb=self.opt.ltrb, K=self.opt.K)
+            dets, inds = mot_decode(
+                hm, wh, reg=reg, ltrb=self.opt.ltrb, K=self.opt.K)
             id_feature = _tranpose_and_gather_feat(id_feature, inds)
             id_feature = id_feature.squeeze(0)
             id_feature = id_feature.cpu().numpy()
@@ -55,26 +56,34 @@ class CachedJDETracker(JDETracker):
         remain_inds = dets[:, 4] > self.opt.conf_thres
         dets = dets[remain_inds]
         id_feature = id_feature[remain_inds]
-        
+
         return dets, id_feature
 
-if __name__ == "__main__":
-    conf_thres = 0.4 # FairMOT authors achieve SOTA on MOT17/20 with 0.4
-    model_path = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/trackers/FairMOT/models/fairmot_dla34.pth'
-    data_dir = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/datasets/MOT17/val_half'
 
-    seqs = os.listdir(data_dir)
+if __name__ == "__main__":
+    conf_thres = 0.4  # FairMOT authors achieve SOTA on MOT17/20 with 0.4
+    model_path = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/trackers/FairMOT/models/fairmot_dla34.pth'
+    data_dir = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/datasets/MOTSynth/train'
+
+    seqs = sorted(os.listdir(data_dir))
     for seq in seqs:
         p = Path(data_dir)
-        output_dir = osp.join(osp.dirname(__file__), p.parent.name, p.name, seq)
-        os.makedirs(output_dir, exist_ok=True)
-        
+        output_dir = osp.join(osp.dirname(__file__),
+                              p.parent.name, p.name, seq)
+        if osp.exists(output_dir):
+            print('Skipping %s' % seq)
+            continue
+        else:
+            os.makedirs(output_dir)
+
         img1_path = osp.join(data_dir, seq, 'img1')
         dataloader = datasets.LoadImages(img1_path)
         meta_info = open(osp.join(data_dir, seq, 'seqinfo.ini')).read()
-        frame_rate = int(meta_info[meta_info.find('frameRate') + 10:meta_info.find('\nseqLength')])
+        frame_rate = int(meta_info[meta_info.find(
+            'frameRate') + 10:meta_info.find('\nseqLength')])
 
-        tracker_args = opts().init(['mot', f'--load_model={model_path}', f'--conf_thres={conf_thres}'])
+        tracker_args = opts().init(
+            ['mot', f'--load_model={model_path}', f'--conf_thres={conf_thres}'])
         tracker = CachedJDETracker(tracker_args, frame_rate)
 
         dets = {}
@@ -86,7 +95,7 @@ if __name__ == "__main__":
             except:
                 blob = torch.from_numpy(img).unsqueeze(0)
             det, id_feature = tracker.jde_only(blob, img0)
-            
+
             frame_id = i+1
             dets[str(frame_id)] = det
             feats[str(frame_id)] = id_feature

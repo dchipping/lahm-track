@@ -16,3 +16,6 @@
 # 	path = mot-gallery-agent/motgym/trackers/deep_sort
 # 	url = https://github.com/nwojke/deep_sort.git
 # 	ignore = dirty
+[submodule "mot-gallery-agent/motgym/trackers/Towards-Realtime-MOT"]
+	path = mot-gallery-agent/motgym/trackers/Towards-Realtime-MOT
+	url = https://github.com/Zhongdao/Towards-Realtime-MOT.git

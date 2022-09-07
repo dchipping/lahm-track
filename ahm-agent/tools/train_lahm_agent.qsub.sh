@@ -1,9 +1,9 @@
 # These are flags you must include - Two memory and one runtime.
 # Runtime is either seconds or hours:min:sec
 
-#$ -l tmem=1G
-#$ -l h_vmem=2G
-#$ -l h_rt=1:0:0 
+#$ -l tmem=2G
+#$ -l h_vmem=16G
+#$ -l h_rt=24:0:0 
 
 #These are optional flags but you probably want them in all jobs
 
@@ -12,7 +12,13 @@
 #$ -N train_lahm_agent_mot17
 
 # output directory for STDOUT file
+
 #$ -o ~/run-log/
+
+# Set resources CPU/GPU
+
+#$ -pe smp 8
+# #$ -l gpu=1
 
 hostname
 date
@@ -82,13 +88,15 @@ rm -d /home/$USER/repos/lahm-track/mot-gallery-agent/motgym/datasets
 rm -d /home/$USER/repos/lahm-track/mot-gallery-agent/motgym/detections
 ./tools/datasets_symbolic_link.sh $(realpath $DATADIR)
 ./tools/detections_symbolic_link.sh $(realpath $DETSDIR)
-find /home/$USER/repos/lahm-track/mot-gallery-agent/motgym/ -maxdepth 1
 
 # Run script
-echo 'Starting Training'
-python /train/sequential/fairmot_seq_ppo_mot17_train_half.py $RESULTSDIR 2>&1 > /dev/null
+date
+echo 'Starting training...'
+python -u ./train/FairMOT/sequential/fairmot_seq_ppo_mot17_train_half.py $RESULTSDIR
 
 # Move results to persistent store
+echo 'Saving results...'
+mkdir /home/$USER/train-results/
 rsync -ar --info=progress2 $RESULTSDIR /home/$USER/train-results/$UNIQUEID
 
 date

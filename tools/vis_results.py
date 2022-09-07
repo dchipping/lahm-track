@@ -119,8 +119,8 @@ def visualize_box(img, text, box, color_index):
 
 
 if __name__ == "__main__":
-    data_dir = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/datasets/MOT17/val_half'
-    results_dir = '/home/dchipping/project/dan-track/results/fairmot_mot17_val_half/2022-07-27T11-29-26'
+    data_dir = '/home/dchipping/project/dan-track/mot-gallery-agent/motgym/datasets/MOT17/train_half'
+    results_dir = '/home/dchipping/project/dan-track/seqs'
 
     output_dir = '/home/dchipping/project/dan-track/videos/images'
 

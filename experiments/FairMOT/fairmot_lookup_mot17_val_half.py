@@ -17,5 +17,5 @@ main(opt,
     # run_name='bug_fix',
     # results_dir=RESULTS_DIR,
     show_image=False,
-    lookup_gallery=5,
+    lookup_gallery=10,
     agent_path='greedy')
