@@ -1,9 +1,9 @@
 # Multi-Object Tracking using Learned Appearance History Management (LAHM)
 ### A reinforcement learning framework for training and evaluating Apperance History Management agents in a multi-object tracking context:
-- `/experiments`: Evaluation scripts for running agents in the tracker on MOT Challenge datasets.
 - `/ahm-agent`: Package for training apperance history management (AHM) agents using variety of modern Reinforcement Learning methods.
-- `/tools`: Results analysis tooling and visulisation scripts for qualatative analysis.
 - `/docs`: Research report and additional material webpage.
+- `/experiments`: Evaluation scripts for running agents in the tracker on MOT Challenge datasets.
+- `/tools`: Result analysis tooling and visulisation scripts for qualatative analysis.
 
 ## Setup Environment
 

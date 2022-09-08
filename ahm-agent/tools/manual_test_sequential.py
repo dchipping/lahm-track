@@ -2,15 +2,21 @@ from collections import defaultdict
 import random
 import gym
 import time
-from ray.rllib.agents import dqn, impala, ppo
+import warnings
+
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+# warnings.filterwarnings("ignore", category=UserWarning)
 
 # Envs
-from motgym.envs.FairMOT.dev_sequential_env import *
+# from motgym.envs.FairMOT.dev_sequential_env import *
+# from motgym.envs.JDE.sequential_env import *
+import numpy as np
 
 
 def run_sequential_env(greedy=False, target_idx=None, seq=None):
     # env = Mot17SequentialEnv()
-    env = MotSynthSequentialEnv()
+    env = gym.make("motgym:JDE/Mot17SequentialEnv-v0")
+    # env = MotSynthSequentialEnv()
     # env = Mot20SequentialEnv(seq='MOT17-1')
     obs = env.reset()
     env.render()

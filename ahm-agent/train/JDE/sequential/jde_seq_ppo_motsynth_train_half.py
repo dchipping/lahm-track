@@ -10,7 +10,7 @@ from ray import rllib, tune
 from ray.tune import CLIReporter
 
 RUN_NAME = ''
-RESULTS_DIR = ''  # tensorboard --logdir $RESULTS_DIR
+RESULTS_DIR = '' # tensorboard --logdir $RESULTS_DIR
 INITIAL_CHECKPOINT = ''
 NUM_CPUS = 8  # nproc
 NUM_GPUS = 1  # nvidia-smi -L | grep GPU | wc -l
@@ -28,8 +28,13 @@ run_name = RUN_NAME if RUN_NAME else dt.datetime.now().strftime("%Y-%m-%dT%H-%M-
 checkpoint_path = INITIAL_CHECKPOINT if INITIAL_CHECKPOINT else None
 
 # Check env is valid
-env = gym.make("motgym:FairMOT/Mot17SequentialEnv-v0")
+env = gym.make("motgym:MotSynthSequentialEnv-JDE")
 rllib.utils.check_env(env)
+
+model = {
+    "fcnet_hiddens": [256, 256],
+    "fcnet_activation": "relu",
+}
 
 # Default config and stopping criteria, see useful scaling guide:
 # https://github.com/ray-project/ray/blob/master/doc/source/rllib/rllib-training.rst#scaling-guide
@@ -38,7 +43,8 @@ config = {
     "num_gpus": NUM_GPUS,
     "num_workers": NUM_CPUS - 1,  # num_workers = Number of simultaneous trials occurring
     "recreate_failed_workers": True,  # For extra stability
-    "env": "motgym:FairMOT/Mot17SequentialEnv-v0"
+    "env": "motgym:JDE/MotSynthSequentialEnv-v0",
+    "model": model
 }
 
 stop = {
@@ -50,9 +56,10 @@ stop = {
 ray.shutdown()
 ray.init(log_to_driver=False)
 
-# Run MOT17 training
+# Run MOTSynth training
 results = tune.run("PPO",
                    config=config,
+                   model=model,
                    name=run_name,
                    local_dir=results_dir,
                    stop=stop,

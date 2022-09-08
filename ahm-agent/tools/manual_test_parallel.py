@@ -4,7 +4,7 @@ import gym
 
 
 def run_parallel_env(greedy=False):
-    env = gym.make("motgym:Mot17ParallelEnv-v0")
+    env = gym.make("motgym:JDE/Mot17ParallelEnv-v0")
 
     env.reset()
     env.render()

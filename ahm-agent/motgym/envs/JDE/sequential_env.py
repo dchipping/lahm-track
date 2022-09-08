@@ -6,15 +6,12 @@ import cv2
 import random
 import numpy as np
 
-import FairMOT.src._init_paths
-from modified.fairmot_train import TrainAgentJDETracker as Tracker
-from opts import opts
+from modified.jde_train import TrainAgentJdeTracker as Tracker
 from tracker.basetrack import BaseTrack
 
-from .base_fairmot_env import BaseFairmotEnv
+from .base_jde_env import BaseJdeEnv
 
-
-class SequentialFairmotEnv(BaseFairmotEnv):
+class SequentialJdeEnv(BaseJdeEnv):
     _instance = 0
 
     def __init__(self, dataset, detections):
@@ -26,8 +23,8 @@ class SequentialFairmotEnv(BaseFairmotEnv):
 
     @staticmethod
     def next_instance():
-        SequentialFairmotEnv._instance += 1
-        return SequentialFairmotEnv._instance
+        SequentialJdeEnv._instance += 1
+        return SequentialJdeEnv._instance
 
     def assign_target(self, track_id=None):
         gts = self.evaluator.gt_frame_dict.items()
@@ -57,8 +54,8 @@ class SequentialFairmotEnv(BaseFairmotEnv):
 
     def _track_update(self, frame_id):
         dets = self.detections[str(frame_id)]
-        feats = self.features[str(frame_id)]
-        return self.tracker.update(dets, feats, frame_id)
+        # feats = self.features[str(frame_id)]
+        return self.tracker.update(dets, frame_id)
 
     def _save_results(self, frame_id):
         # Filter to only save active tracks
@@ -138,7 +135,7 @@ class SequentialFairmotEnv(BaseFairmotEnv):
         BaseTrack._count = 0
         self.aux_thres = random.random()
         self.tracker = Tracker(
-            self.tracker_args, self.frame_rate, lookup_gallery=0)
+            self.tracker_args, self.frame_rate)
 
     def reset(self):
         self._reset_env()
@@ -163,7 +160,7 @@ class SequentialFairmotEnv(BaseFairmotEnv):
     def _generate_reward(self):
         TN = not self.gt_tid and not self.track in self.online_targets
         TP = self.track.track_id == self.gt_tid
-        prop_reward = 100 / self.seq_len
+        prop_reward = 1#100 / self.seq_len
 
         done = False
         if TN or TP:
@@ -180,7 +177,7 @@ class SequentialFairmotEnv(BaseFairmotEnv):
 
         return reward, done
 
-    @BaseFairmotEnv.calc_fps
+    @BaseJdeEnv.calc_fps
     def step(self, action):
         for track in self.online_targets:
             if track is self.track:
@@ -222,22 +219,22 @@ class SequentialFairmotEnv(BaseFairmotEnv):
         self._display_frame(img0, self.gt_tid)
 
 
-class Mot17SequentialEnv(SequentialFairmotEnv):
+class Mot17SequentialEnv(SequentialJdeEnv):
     def __init__(self):
         dataset = 'MOT17/train_half'
-        detections = 'FairMOT/MOT17/train_half'
+        detections = 'JDE/MOT17/train_half'
         super().__init__(dataset, detections)
 
 
-class Mot20SequentialEnv(SequentialFairmotEnv):
+class Mot20SequentialEnv(SequentialJdeEnv):
     def __init__(self):
         dataset = 'MOT17/train_half'
-        detections = 'FairMOT/MOT17/train_half'
+        detections = 'JDE/MOT17/train_half'
         super().__init__(dataset, detections)
 
 
-class MotSynthSequentialEnv(SequentialFairmotEnv):
+class MotSynthSequentialEnv(SequentialJdeEnv):
     def __init__(self):
         dataset = 'MOTSynth/train'
-        detections = 'FairMOT/MOTSynth/train'
+        detections = 'JDE/MOTSynth/train'
         super().__init__(dataset, detections)

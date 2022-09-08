@@ -57,7 +57,10 @@ class BasicMotEnv(gym.Env):
 
     def _load_detections(self, seq):
         self.detections = np.load(osp.join(self.dets_dir, seq, 'dets.npz'))
-        self.features = np.load(osp.join(self.dets_dir, seq, 'feats.npz'))
+        try:
+            self.features = np.load(osp.join(self.dets_dir, seq, 'feats.npz'))
+        except:
+            self.features = None
 
     @abstractmethod
     def reset(self):

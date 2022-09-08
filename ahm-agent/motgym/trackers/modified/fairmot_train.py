@@ -267,11 +267,14 @@ class TrainAgentJDETracker():
 
         ### Detections and features are pre-generated using gen_fairmot_jde.py ###
 
-        # Calculate maximum overlap of each detection with neighbouring detections
-        # Lower score means more overlap, min iou score = worst overlap
-        min_iou_scores = get_min_iou_scores(dets)
-
         if len(dets) > 0:
+            # Calculate maximum overlap of each detection with neighbouring detections
+            # Lower score means more overlap, min iou score = worst overlap
+            if len(dets) > 1:
+                min_iou_scores = get_min_iou_scores(dets[:, :4])
+            else:
+                min_iou_scores = [1.]
+
             '''Detections'''
             detections = [AgentSTrack(AgentSTrack.tlbr_to_tlwh(tlbrs[:4]), tlbrs[4], f, min_iou_score, agent=None)
                           for (tlbrs, f, min_iou_score) in zip(dets[:, :5], id_feature, min_iou_scores)]

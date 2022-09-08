@@ -29,7 +29,7 @@ class BaseFairmotEnv(BasicMotEnv):
         self.observation_space = spaces.Box(
             np.zeros((6,)), np.array([1, 1, 5000, 1, 1, 1]), shape=(6,), dtype=float)
 
-        buffer_size = 500  # Tracks are 'never' lost during training!
+        buffer_size = 500  # Tracks are 'never' perm lost during training!
         self.tracker_args = opts().init(
             ['mot', f'--track_buffer={buffer_size}'])
 
