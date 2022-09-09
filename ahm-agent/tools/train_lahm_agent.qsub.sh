@@ -74,7 +74,7 @@ python seperate_seqs.py
 
 # Download detections
 cd $DETSDIR
-gdown -q 1JlNKD1uFPXfs5mEYswsoa4AVfP0Hafyw
+gdown -q 1JlNKD1uFPXfs5mEYswsoa4AVfP0Hafyw # Google Drive Dets Download
 unzip -q FairMOT.zip
 rm FairMOT.zip
 

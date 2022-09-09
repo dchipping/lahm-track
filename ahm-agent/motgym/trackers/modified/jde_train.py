@@ -32,7 +32,7 @@ class AgentSTrack(BaseTrack):
         self.curr_feat = np.asarray(temp_feat, dtype=float)
 
         self.smooth_feat = temp_feat
-        self.features = deque([])
+        self.features = deque([], maxlen=100)
         self.alpha = 0.9
 
     def gallery_similarity(self, feat):

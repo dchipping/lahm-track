@@ -1,25 +1,21 @@
 import copy
-import os.path as osp
 
 import cv2
-import numpy as np
-from gym import spaces
-import FairMOT.src._init_paths
-from modified.fairmot_train import TrainAgentJDETracker as Tracker
-from opts import opts
+from modified.jde_train import TrainAgentJdeTracker as Tracker
 from tracker.basetrack import BaseTrack
 
-from .base_fairmot_env import BaseFairmotEnv
+
+from .base_jde_env import BaseJdeEnv
 
 
-class ParallelFairmotEnv(BaseFairmotEnv):
+class ParallelJdeEnv(BaseJdeEnv):
     def __init__(self, dataset, detections):
         super().__init__(dataset, detections)
 
     def _track_update(self, frame_id):
         dets = self.detections[str(frame_id)]
-        feats = self.features[str(frame_id)]
-        return self.tracker.update(dets, feats, frame_id)
+        # feats = self.features[str(frame_id)]
+        return self.tracker.update(dets, frame_id)
 
     def _save_results(self, frame_id):
         # Filter to only save active tracks
@@ -75,8 +71,7 @@ class ParallelFairmotEnv(BaseFairmotEnv):
         self.frame_id = 1
         self.track_idx = 0
         BaseTrack._count = 0
-        self.tracker = Tracker(
-            self.tracker_args, self.frame_rate, lookup_gallery=10)
+        self.tracker = Tracker(self.tracker_args, self.frame_rate)
 
     def reset(self):
         self._reset_seq()
@@ -125,8 +120,8 @@ class ParallelFairmotEnv(BaseFairmotEnv):
         while curr_frame_id < eval_frame_id:
             curr_frame_id += 1
             dets = self.detections[str(curr_frame_id)]
-            feats = self.features[str(curr_frame_id)]
-            online_targets = self.tracker.update(dets, feats, curr_frame_id)
+            # feats = self.features[str(curr_frame_id)]
+            online_targets = self.tracker.update(dets, curr_frame_id)
             self._add_results(results, curr_frame_id, online_targets)
 
         BaseTrack._count = frozen_count
@@ -162,7 +157,7 @@ class ParallelFairmotEnv(BaseFairmotEnv):
             reward += mm_types.count('MATCH')
         return reward
 
-    @BaseFairmotEnv.calc_fps
+    @BaseJdeEnv.calc_fps
     def step(self, action):
         '''Parallel env flow see env-data-flow.png for design'''
         # Take action
@@ -172,7 +167,7 @@ class ParallelFairmotEnv(BaseFairmotEnv):
         # Look to future to evaluate if successful action
         reward = 0
         if self.frame_id < self.seq_len:
-            step = self.frame_rate * 0.2  # How far into future to evaluate
+            step = 5#self.frame_rate * 0.2  # How far into future to evaluate
             eval_frame_id = min(self.seq_len - 1, self.frame_id + step)
             mm_types = self._evaluate(track.track_id, eval_frame_id)
             reward = self._generate_reward(track, mm_types)
@@ -210,29 +205,22 @@ class ParallelFairmotEnv(BaseFairmotEnv):
         self._display_frame(img0, track_id)
 
 
-class DancetrackParallelEnv(ParallelFairmotEnv):
-    def __init__(self):
-        dataset = 'dancetrack/train'
-        detections = 'FairMOT/dancetrack/train'
-        super().__init__(dataset, detections)
-
-
-class Mot17ParallelEnv(ParallelFairmotEnv):
+class Mot17ParallelEnv(ParallelJdeEnv):
     def __init__(self):
         dataset = 'MOT17/train_half'
-        detections = 'FairMOT/MOT17/train_half'
+        detections = 'JDE/MOT17/train_half'
         super().__init__(dataset, detections)
 
 
-class Mot20ParallelEnv(ParallelFairmotEnv):
+class Mot20ParallelEnv(ParallelJdeEnv):
     def __init__(self):
         dataset = 'MOT20/train_half'
-        detections = 'FairMOT/MOT20/train_half'
+        detections = 'JDE/MOT20/train_half'
         super().__init__(dataset, detections)
 
 
-class MotSynthParallelEnv(ParallelFairmotEnv):
+class MotSynthParallelEnv(ParallelJdeEnv):
     def __init__(self):
         dataset = 'MOTSynth/train'
-        detections = 'FairMOT/MOTSynth/train'
+        detections = 'JDE/MOTSynth/train'
         super().__init__(dataset, detections)

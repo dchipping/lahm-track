@@ -44,7 +44,7 @@ if __name__ == "__main__":
     conf_thres = 0.4  # FairMOT authors achieve SOTA on MOT17/20 with 0.4
     config_path = '/home/dchipping/project/dan-track/ahm-agent/motgym/trackers/Towards-Realtime-MOT/cfg/yolov3_1088x608.cfg' # 1088x608 864x480
     model_path = '/home/dchipping/project/dan-track/ahm-agent/motgym/trackers/Towards-Realtime-MOT/models/jde.1088x608.uncertainty.pt'
-    data_dir = '/home/dchipping/project/dan-track/ahm-agent/motgym/datasets/MOT20/train_half'
+    data_dir = '/home/dchipping/project/dan-track/ahm-agent/motgym/datasets/MOTSynth/train'
 
     parser = argparse.ArgumentParser(prog='gen_jde_dets.py')
     parser.add_argument('--cfg', type=str, default=config_path, help='cfg file path')
@@ -81,16 +81,19 @@ if __name__ == "__main__":
 
         dets = {}
         print(f"Starting the processing {seq} frames...")
-        for i, (path, img, img0) in enumerate(dataloader):
-            try:
-                blob = torch.from_numpy(img).cuda().unsqueeze(0)
-            except:
-                blob = torch.from_numpy(img).unsqueeze(0)
-            det = tracker.jde_only(blob, img0)
+        try:
+            for i, (path, img, img0) in enumerate(dataloader):
+                try:
+                    blob = torch.from_numpy(img).cuda().unsqueeze(0)
+                except:
+                    blob = torch.from_numpy(img).unsqueeze(0)
+                det = tracker.jde_only(blob, img0)
 
-            frame_id = i+1
-            dets[str(frame_id)] = det
+                frame_id = i+1
+                dets[str(frame_id)] = det
 
-        print(f"Saving {seq} dets to: {output_dir}")
-        dets_file = osp.join(output_dir, 'dets.npz') # 0:5 is bbox, 6: is embedding
-        np.savez(dets_file, **dets)
+            print(f"Saving {seq} dets to: {output_dir}")
+            dets_file = osp.join(output_dir, 'dets.npz') # 0:5 is bbox, 6: is embedding
+            np.savez(dets_file, **dets)
+        except:
+            print(f"Failed to process {seq}")

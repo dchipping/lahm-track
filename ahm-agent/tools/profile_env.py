@@ -7,8 +7,9 @@ pr.enable()
 ### PROFILING START ###
 
 from tools.manual_test_sequential import run_sequential_env
+from tools.manual_test_parallel import run_parallel_env
 
-run_sequential_env(greedy=True)
+run_parallel_env()
 
 ### PROFILING END ###
 

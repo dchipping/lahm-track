@@ -160,7 +160,7 @@ class SequentialJdeEnv(BaseJdeEnv):
     def _generate_reward(self):
         TN = not self.gt_tid and not self.track in self.online_targets
         TP = self.track.track_id == self.gt_tid
-        prop_reward = 1#100 / self.seq_len
+        prop_reward = 100 / self.seq_len
 
         done = False
         if TN or TP:
