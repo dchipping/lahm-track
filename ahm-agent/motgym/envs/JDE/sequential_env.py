@@ -228,8 +228,8 @@ class Mot17SequentialEnv(SequentialJdeEnv):
 
 class Mot20SequentialEnv(SequentialJdeEnv):
     def __init__(self):
-        dataset = 'MOT17/train_half'
-        detections = 'JDE/MOT17/train_half'
+        dataset = 'MOT20/train_half'
+        detections = 'JDE/MOT20/train_half'
         super().__init__(dataset, detections)
 
 

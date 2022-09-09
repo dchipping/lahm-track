@@ -231,8 +231,8 @@ class Mot17SequentialEnv(SequentialFairmotEnv):
 
 class Mot20SequentialEnv(SequentialFairmotEnv):
     def __init__(self):
-        dataset = 'MOT17/train_half'
-        detections = 'FairMOT/MOT17/train_half'
+        dataset = 'MOT20/train_half'
+        detections = 'FairMOT/MOT20/train_half'
         super().__init__(dataset, detections)
 
 
