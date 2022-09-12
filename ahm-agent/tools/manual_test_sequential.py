@@ -15,7 +15,7 @@ import numpy as np
 
 def run_sequential_env(greedy=False, target_idx=None, seq=None):
     # env = Mot17SequentialEnv()
-    env = gym.make("motgym:JDE/MotSynthSequentialEnv-v0")
+    env = gym.make("motgym:JDE/Mot17SequentialEnv-v0")
     # env = MotSynthSequentialEnv()
     # env = Mot20SequentialEnv(seq='MOT17-1')
     obs = env.reset()

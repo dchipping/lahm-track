@@ -1,5 +1,6 @@
 import os
 import cv2
+import os.path as osp
 
 def merge_visualization(agent_dir, baseline_dir, out_dir, filename):
     # Check if video exists at output
@@ -38,8 +39,15 @@ def merge_visualization(agent_dir, baseline_dir, out_dir, filename):
 if __name__ == "__main__":
     out_dir = '/home/dchipping/project/dan-track/videos'
 
-    filename = 'agent-vs-baseline-MOT17-09'
-    agent_dir = '/home/dchipping/project/dan-track/videos/images/fairmot_agent_mot17_val_half/2022-07-27T12-57-38/MOT17-09'
-    baseline_dir = '/home/dchipping/project/dan-track/videos/images/fairmot_mot17_val_half/2022-07-27T11-29-26/MOT17-09'
+    filename = 'agent-vs-baseline'
+    agent_dir = '/home/dchipping/project/dan-track/videos/images/jde_agent_mot17_test/ppo_mot17_val_half'
+    baseline_dir = '/home/dchipping/project/dan-track/videos/images/jde_mot17_test/2022-09-11T03-46-14'
 
-    merge_visualization(agent_dir, baseline_dir, out_dir, filename)
+    # merge_visualization(agent_dir, baseline_dir, out_dir, filename)
+    seqs = sorted(os.listdir(agent_dir))
+    for seq in seqs:
+        merge_visualization(
+            osp.join(agent_dir, seq),
+            osp.join(baseline_dir, seq),
+            out_dir,
+            f'{filename}-{seq}')

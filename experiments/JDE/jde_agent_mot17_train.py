@@ -3,10 +3,10 @@ from pathlib import Path
 
 from jde_exp_utils import *
 
-AGENT_PATH = '/home/dchipping/project/dan-track/ahm-agent/results/a256cb6c-3d5f/2022-09-11T00-05-54/PPO_motgym:JDE_Mot17SequentialEnv-v0_2dd5c_00000_0_2022-09-11_00-06-19/checkpoint_000250/checkpoint-250'
+AGENT_PATH = '/home/dchipping/project/dan-track/ahm-agent/results/policies/train-results/41c8d3f3-c23e/2022-09-09T15-58-23/PPO_motgym:JDE_Mot17SequentialEnv-v0_e0754_00000_0_2022-09-09_15-58-34/checkpoint_000100/checkpoint-100'
 CONFIG_PATH = '/home/dchipping/project/dan-track/ahm-agent/motgym/trackers/Towards-Realtime-MOT/cfg/yolov3_1088x608.cfg'
 MODEL_PATH = '/home/dchipping/project/dan-track/ahm-agent/motgym/trackers/Towards-Realtime-MOT/models/jde.1088x608.uncertainty.pt'
-DATA_DIR = '/home/dchipping/project/dan-track/ahm-agent/motgym/datasets/MOT17/val_half'
+DATA_DIR = '/home/dchipping/project/dan-track/ahm-agent/motgym/datasets/MOT17/train'
 RESULTS_DIR = ''
 
 parser = argparse.ArgumentParser()
@@ -31,6 +31,6 @@ main(parser.parse_args(),
      data_root=DATA_DIR,
      seqs=seqs,
      exp_name=Path(__file__).stem,
-     # run_name='ppo_mot17_val_half',
+     # run_name='ppo_mot17_train',
      show_image=False,
      agent_path=AGENT_PATH)

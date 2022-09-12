@@ -1,20 +1,30 @@
+"""
+If experiencing issues with rllib: TypeError: can't convert np.ndarray of type numpy.object_. 
+The only supported types are: float64, float32, float16, complex64, complex128, int64, int32 etc.
+
+Add the following to mapping(item) in rllib/utils/torch_utils.py:
+    def mapping(item):
+      if item is None:
+            # returns None with dtype=np.obj
+            return np.asarray(item)
+"""
+
 import sys
 import random
 
 import torch
 from ray.rllib.agents import dqn, impala, ppo
 
-JDE = __import__('Towards-Realtime-MOT')
-sys.path.insert(0, JDE.__path__[0])
 
-from models import *
-from tracker import matching
-from tracker.basetrack import BaseTrack, TrackState
-from utils.kalman_filter import KalmanFilter
-from utils.log import logger
+JDE = __import__('Towards-Realtime-MOT')
+sys.path.insert(0, JDE.__path__._path[0])
 
 from .jde_train import TrainAgentJdeTracker, AgentSTrack
-
+from utils.log import logger
+from utils.kalman_filter import KalmanFilter
+from tracker.basetrack import BaseTrack, TrackState
+from tracker import matching
+from models import *
 
 class RandomAgent:
     @staticmethod
@@ -53,27 +63,34 @@ class AgentJdeTracker(TrainAgentJdeTracker):
         # AND USE INDEPENDENTLY OF RESETTING ENV AND CAUSING COUNT TO GO UP?
 
     def build_agent(self, agent_path):
+        model = {
+            "fcnet_hiddens": [256, 256],
+            "fcnet_activation": "relu",
+        }
         if not agent_path:
             return None
         elif agent_path == 'greedy':
             return GreedyAgent()
         elif agent_path == 'random':
             return RandomAgent()
-        elif 'dqn' in agent_path:
+        elif 'dqn' in agent_path.lower():
             config = dqn.DEFAULT_CONFIG.copy()
             config["framework"] = "torch"
+            config["model"] = model
             trainer = dqn.DQNTrainer(
-                config=config, env="motgym:BaseJdeEnv")
-        elif 'ppo' in agent_path:
+                config=config, env="motgym:BaseJdeEnv-v0")
+        elif 'ppo' in agent_path.lower():
             config = ppo.DEFAULT_CONFIG.copy()
+            config["model"] = model
             config["framework"] = "torch"
             trainer = ppo.PPOTrainer(
-                config=config, env="motgym:BaseJdeEnv")
-        elif 'impala' in agent_path:
+                config=config, env="motgym:BaseJdeEnv-v0")
+        elif 'impala' in agent_path.lower():
             config = impala.DEFAULT_CONFIG.copy()
+            # config["model"] = model
             config["framework"] = "torch"
             trainer = impala.ImpalaTrainer(
-                config=config, env="motgym:BaseJdeEnv")
+                config=config, env="motgym:BaseJdeEnv-v0")
         trainer.restore(agent_path)
         return trainer
 
@@ -112,12 +129,14 @@ class AgentJdeTracker(TrainAgentJdeTracker):
             pred = self.model(im_blob)
         # pred is tensor of all the proposals (default number of proposals: 54264). Proposals have information associated with the bounding box and embeddings
         pred = pred[pred[:, :, 4] > self.opt.conf_thres]
+        dets = []
         if len(pred) > 0:
-            dets = non_max_suppression(pred.unsqueeze(0), self.opt.conf_thres, self.opt.nms_thres)[0].cpu()
+            dets = non_max_suppression(pred.unsqueeze(
+                0), self.opt.conf_thres, self.opt.nms_thres)[0].cpu()
             # Final proposals are obtained in dets. Information of bounding box and embeddings also included
             # Next step changes the detection scales
             scale_coords(self.opt.img_size, dets[:, :4], img0.shape).round()
-        
+
         # pred now has lesser number of proposals. Proposals rejected on basis of object confidence score
         if len(dets) > 0:
             '''Detections is list of (x1, y1, x2, y2, object_conf, class_score, class_pred)'''
@@ -263,10 +282,14 @@ class AgentJdeTracker(TrainAgentJdeTracker):
             track for track in self.tracked_stracks if track.is_activated]
 
         logger.debug('===========Frame {}=========='.format(self.frame_id))
-        logger.debug('Activated: {}'.format([track.track_id for track in activated_starcks]))
-        logger.debug('Refind: {}'.format([track.track_id for track in refind_stracks]))
-        logger.debug('Lost: {}'.format([track.track_id for track in lost_stracks]))
-        logger.debug('Removed: {}'.format([track.track_id for track in removed_stracks]))
+        logger.debug('Activated: {}'.format(
+            [track.track_id for track in activated_starcks]))
+        logger.debug('Refind: {}'.format(
+            [track.track_id for track in refind_stracks]))
+        logger.debug('Lost: {}'.format(
+            [track.track_id for track in lost_stracks]))
+        logger.debug('Removed: {}'.format(
+            [track.track_id for track in removed_stracks]))
         # print('Final {} s'.format(t5-t4))
         return output_stracks
 

@@ -4,7 +4,7 @@ from collections import deque
 from scipy.spatial.distance import cdist
 
 JDE = __import__('Towards-Realtime-MOT')
-sys.path.insert(0, JDE.__path__[0])
+sys.path.insert(0, JDE.__path__._path[0])
 
 from models import *
 from numba import jit

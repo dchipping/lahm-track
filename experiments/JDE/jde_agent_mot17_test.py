@@ -3,10 +3,10 @@ from pathlib import Path
 
 from jde_exp_utils import *
 
-AGENT_PATH = '/home/dchipping/project/dan-track/ahm-agent/results/a256cb6c-3d5f/2022-09-11T00-05-54/PPO_motgym:JDE_Mot17SequentialEnv-v0_2dd5c_00000_0_2022-09-11_00-06-19/checkpoint_000250/checkpoint-250'
+AGENT_PATH = '/home/dchipping/project/dan-track/ahm-agent/results/64623487-ae78/2022-09-10T12-10-07/PPO_motgym:JDE_Mot17SequentialEnv-v0_2fe58_00000_0_2022-09-10_12-10-33/checkpoint_000100/checkpoint-100'
 CONFIG_PATH = '/home/dchipping/project/dan-track/ahm-agent/motgym/trackers/Towards-Realtime-MOT/cfg/yolov3_1088x608.cfg'
 MODEL_PATH = '/home/dchipping/project/dan-track/ahm-agent/motgym/trackers/Towards-Realtime-MOT/models/jde.1088x608.uncertainty.pt'
-DATA_DIR = '/home/dchipping/project/dan-track/ahm-agent/motgym/datasets/MOT17/val_half'
+DATA_DIR = '/home/dchipping/project/dan-track/ahm-agent/motgym/datasets/MOT17/test'
 RESULTS_DIR = ''
 
 parser = argparse.ArgumentParser()

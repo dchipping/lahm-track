@@ -4,7 +4,7 @@ from jde_exp_utils import *
 
 CONFIG_PATH = '/home/dchipping/project/dan-track/ahm-agent/motgym/trackers/Towards-Realtime-MOT/cfg/yolov3_1088x608.cfg'
 MODEL_PATH = '/home/dchipping/project/dan-track/ahm-agent/motgym/trackers/Towards-Realtime-MOT/models/jde.1088x608.uncertainty.pt'
-DATA_DIR = '/home/dchipping/project/dan-track/ahm-agent/motgym/datasets/MOT17/val_half'
+DATA_DIR = '/home/dchipping/project/dan-track/ahm-agent/motgym/datasets/MOT17/test'
 RESULTS_DIR = ''
 
 parser = argparse.ArgumentParser()

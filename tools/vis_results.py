@@ -119,14 +119,14 @@ def visualize_box(img, text, box, color_index):
 
 
 if __name__ == "__main__":
-    data_dir = '/home/dchipping/project/dan-track/ahm-agent/motgym/datasets/MOT17/train_half'
-    results_dir = '/home/dchipping/project/dan-track/seqs'
-
+    data_dir = '/home/dchipping/project/dan-track/ahm-agent/motgym/datasets/MOT17/test'
+    # results_dir = '/home/dchipping/project/dan-track/results/jde_mot17_test/2022-09-11T03-46-14'
+    results_dir = '/home/dchipping/project/dan-track/results/jde_agent_mot17_test/ppo_mot17_val_half'
     output_dir = '/home/dchipping/project/dan-track/videos/images'
 
     seqs = [seq.stem for seq in map(
         Path, os.listdir(results_dir)) if seq.suffix == '.txt']
-    for seq in seqs:
+    for seq in sorted(seqs):
         p = Path(results_dir)
         img_output_dir = osp.join(output_dir, p.parent.name, p.name, seq)
         os.makedirs(img_output_dir, exist_ok=True)

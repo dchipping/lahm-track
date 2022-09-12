@@ -14,7 +14,7 @@ RESULTS_DIR = ''  # tensorboard --logdir $RESULTS_DIR
 INITIAL_CHECKPOINT = ''
 NUM_CPUS = 2  # nproc
 NUM_GPUS = 1  # nvidia-smi -L | grep GPU | wc -l
-STOP_ITERS = 100
+STOP_ITERS = 10
 CHECKPOINT_FREQ = 25
 REPORT_FREQ = 900
 

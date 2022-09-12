@@ -22,6 +22,6 @@ main(parser.parse_args(),
      data_root=DATA_DIR,
      seqs=seqs,
      exp_name=Path(__file__).stem,
-     #  run_name='buffer_size_100',
-     show_image=True,
+     #  run_name='2022-09-10T12-58-07',
+     show_image=False,
      agent_path='greedy')

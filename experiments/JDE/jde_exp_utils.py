@@ -12,7 +12,7 @@ import sys
 
 import motgym
 JDE = __import__('Towards-Realtime-MOT')
-sys.path.insert(0, JDE.__path__[0])
+sys.path.insert(0, JDE.__path__._path[0])
 
 from modified.jde_agent import AgentJdeTracker
 from utils import visualization as vis

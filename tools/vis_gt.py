@@ -119,8 +119,7 @@ def visualize_box(img, text, box, color_index):
 
 
 if __name__ == "__main__":
-    data_dir = '/home/dchipping/project/dan-track/ahm-agent/motgym/datasets/MOTSynth/train'
-
+    data_dir = '/home/dchipping/project/dan-track/ahm-agent/motgym/datasets/MOT20/val_half'
     output_dir = '/home/dchipping/project/dan-track/videos/gt_images'
 
     seqs = sorted(os.listdir(data_dir))
