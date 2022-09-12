@@ -7,15 +7,20 @@
 # 	url = https://github.com/nwojke/deep_sort.git
 # 	ignore = dirty
 
-[submodule "TrackEval"]
-	path = tools/TrackEval
-	url = https://github.com/JonathonLuiten/TrackEval.git
-	ignore = dirty
-[submodule "FairMOT"]
-	path = ahm-agent/motgym/trackers/FairMOT
-	url = https://github.com/ifzhang/FairMOT.git
-	ignore = dirty
-[submodule "JDE"]
-	path = ahm-agent/motgym/trackers/Towards-Realtime-MOT
-	url = https://github.com/Zhongdao/Towards-Realtime-MOT.git
-	ignore = dirty
+# [submodule "TrackEval"]
+# 	path = tools/TrackEval
+# 	url = https://github.com/JonathonLuiten/TrackEval.git
+# 	ignore = dirty
+# [submodule "FairMOT"]
+# 	path = ahm-agent/motgym/trackers/FairMOT
+# 	url = https://github.com/ifzhang/FairMOT.git
+# 	ignore = dirty
+# [submodule "JDE"]
+# 	path = ahm-agent/motgym/trackers/Towards-Realtime-MOT
+# 	url = https://github.com/Zhongdao/Towards-Realtime-MOT.git
+# 	ignore = dirty
+# [submodule "ahm-agent/motgym/trackers/Towards-Realtime-MOT/utils/syncbn"]
+# 	path = ahm-agent/motgym/trackers/Towards-Realtime-MOT/utils/syncbn
+# 	url = https://github.com/ytoon/Synchronized-BatchNorm-PyTorch.git
+# 	ignore = dirty
+
